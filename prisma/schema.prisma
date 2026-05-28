@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+}
+
+enum AccountStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+model User {
+  id String @id @default(cuid())
+
+  // Basic Info
+  firstName String? @db.VarChar(100)
+  lastName  String? @db.VarChar(100)
+  username  String? @unique @db.VarChar(50)
+
+  // Auth
+  email    String  @unique @db.VarChar(255)
+  password String? @db.VarChar(255)
+
+  // Avatar
+  avatarUrl String? @db.Text
+
+  // Role & Status
+  role   UserRole      @default(USER)
+  status AccountStatus @default(PENDING_VERIFICATION)
+
+  // Verification
+  isEmailVerified Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  // Security
+  lastLoginAt         DateTime?
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockUntil           DateTime?
+
+  // OAuth
+  provider          AuthProvider @default(EMAIL)
+  providerAccountId String?
+
+  // Soft Delete
+  deletedAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions                Session[]
+  refreshTokens           RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Device Info
+  ipAddress String? @db.VarChar(100)
+  userAgent String? @db.Text
+
+  // Session Info
+  isCurrent Boolean @default(false)
+
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique @db.Text
+
+  revoked Boolean @default(false)
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique @db.Text
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique @db.Text
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+}
