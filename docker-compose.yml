@@ -13,3 +13,21 @@ services:
       - .env
 
     restart: unless-stopped
+  
+  db:
+    image: postgres:17-alpine
+    container_name: if_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: identityforge
+    volumes:
+      # This is the "safe" part: it persists your data on your host machine
+      # so if the container dies, your data survives.
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
