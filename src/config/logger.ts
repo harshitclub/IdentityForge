@@ -21,7 +21,16 @@ const consoleFormat = printf(({ level, message, timestamp, stack }) => {
 export const logger = winston.createLogger({
   level: "info",
 
-  format: combine(timestamp(), errors({ stack: true }), json()),
+  format: combine(
+    timestamp(),
+    errors({ stack: true }),
+    winston.format((info) => {
+      info.service = "identity-forge";
+
+      return info;
+    })(),
+    json(),
+  ),
 
   transports: [
     /**

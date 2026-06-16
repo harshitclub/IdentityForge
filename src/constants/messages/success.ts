@@ -1,0 +1,19 @@
+export const SUCCESS_MESSAGES = {
+  SIGNUP_SUCCESS: "Account created successfully. Please verify your email.",
+  LOGIN_SUCCESS: "Login successful",
+  LOGOUT_SUCCESS: "Logout successful",
+  TOKEN_REFRESH_SUCCESS: "Access token refreshed successfully",
+  PASSWORD_RESET_EMAIL_SENT:
+    "Password reset instructions have been sent to your email.",
+  PASSWORD_RESET_SUCCESS: "Password has been reset successfully.",
+  PASSWORD_CHANGED_SUCCESS: "Password changed successfully.",
+  EMAIL_VERIFIED_SUCCESS: "Email verified successfully.",
+  EMAIL_VERIFICATION_SENT: "Verification email sent successfully.",
+  SESSION_REVOKED_SUCCESS: "Session revoked successfully.",
+  ALL_SESSIONS_REVOKED_SUCCESS: "All sessions revoked successfully.",
+  PROFILE_FETCHED_SUCCESS: "Profile retrieved successfully.",
+  PROFILE_UPDATED_SUCCESS: "Profile updated successfully.",
+  ACCOUNT_DELETED_SUCCESS: "Account deleted successfully.",
+  USER_STATUS_UPDATED: "User status updated successfully.",
+  USER_ROLE_UPDATED: "User role updated successfully.",
+} as const;

@@ -7,6 +7,8 @@ import { AppError } from "../utils/appError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 
 import { logger } from "../config/logger.js";
+import { createLogContext } from "../utils/loggerContext.js";
+import { ERROR_MESSAGES, HTTP_STATUS, LOG_EVENTS } from "../constants/index.js";
 
 export const globalErrorHandler = (
   err: any,
@@ -14,8 +16,8 @@ export const globalErrorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
-  let statusCode = 500;
-  let message = "Internal Server Error";
+  let statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  let message: string = ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
   let errors: any[] = [];
 
   /**
@@ -39,14 +41,14 @@ export const globalErrorHandler = (
     /**
      * JWT Invalid Error
      */
-    statusCode = 401;
-    message = "Invalid token";
+    statusCode = HTTP_STATUS.UNAUTHORIZED;
+    message = ERROR_MESSAGES.INVALID_TOKEN;
   } else if (err instanceof jwt.TokenExpiredError) {
     /**
      * JWT Expired Error
      */
-    statusCode = 401;
-    message = "Token expired";
+    statusCode = HTTP_STATUS.UNAUTHORIZED;
+    message = ERROR_MESSAGES.TOKEN_EXPIRED;
   } else {
     /**
      * Unknown Errors
@@ -57,13 +59,15 @@ export const globalErrorHandler = (
   /**
    * Winston Logging
    */
-  logger.error({
-    message: err.message,
-    stack: err.stack,
-    method: req.method,
-    path: req.originalUrl,
-    statusCode,
-  });
+  logger.error(
+    createLogContext(LOG_EVENTS.UNHANDLED_EXCEPTION, {
+      operation: "globalErrorHandler",
+      method: req.method,
+      path: req.originalUrl,
+      statusCode,
+      error: err,
+    }),
+  );
 
   /**
    * Development Response

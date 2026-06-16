@@ -9,11 +9,12 @@
   "scripts": {
     "db:start": "docker compose up -d db",
     "db:stop": "docker compose stop db",
-    "dev": "npm run db:start && npx prisma generate && cross-env NODE_ENV=development tsx watch src/server.ts",
+    "dev": "npm run db:start && npm run prisma:generate && cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "npx prisma generate && tsc",
     "start": "cross-env NODE_ENV=production node dist/server.js",
+    "prisma:generate": "npx prisma generate",
     "prisma:studio": "npx prisma studio",
-    "pm2:start": "npm run build && pm2 start ecosystem.config.cjs",
+    "pm2:start": "npm run build && npm run db:start && npm run prisma:generate && pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop identityforge",
     "pm2:delete": "pm2 delete identityforge",
     "pm2:logs": "pm2 logs"

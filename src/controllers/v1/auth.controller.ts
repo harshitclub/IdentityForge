@@ -2,12 +2,54 @@ import type { Request, Response } from "express";
 
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { apiResponse } from "../../utils/apiResponse.js";
+import { AppError } from "../../utils/appError.js";
+import { logger } from "../../config/logger.js";
+import { maskEmail } from "../../utils/mask.js";
+import { hashPassword } from "../../utils/auth/password.js";
+import { prisma } from "../../config/prisma.js";
+import { createLogContext } from "../../utils/loggerContext.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../constants/index.js";
 
 /**
  * @desc    Signup User
  * @route   POST /api/v1/auth/signup
  */
 export const signup = asyncHandler(async (req: Request, res: Response) => {
+  const { firstName, lastName, email, password } = req.body;
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existingUser) {
+    logger.warn(
+      createLogContext(LOG_EVENTS.USER_ALREADY_EXISTS, {
+        operation: "signup",
+        email: maskEmail(email),
+      }),
+    );
+    throw new AppError(
+      ERROR_MESSAGES.USER_ALREADY_EXISTS,
+      HTTP_STATUS.CONFLICT,
+    );
+  }
+
+  const encryptPassword = await hashPassword(password);
+
+  const user = await prisma.user.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      password: encryptPassword,
+    },
+  });
+
   return apiResponse({
     req,
     res,

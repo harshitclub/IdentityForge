@@ -12,13 +12,15 @@ import {
   signup,
   verifyEmail,
 } from "../../controllers/v1/auth.controller.js";
+import { validate } from "../../middlewares/validate.middleware.js";
+import { registerSchema } from "../../validators/auth.validator.js";
 
 const router = Router();
 
 /**
  * Authentication Routes
  */
-router.post("/signup", signup);
+router.post("/signup", validate(registerSchema), signup);
 
 router.post("/login", login);
 

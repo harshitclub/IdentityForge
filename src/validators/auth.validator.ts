@@ -4,10 +4,14 @@ import { z } from "zod";
  * Register Schema
  */
 export const registerSchema = z.object({
-  fullName: z
+  firstName: z
     .string()
-    .min(3, "Full name must be at least 3 characters")
-    .max(50, "Full name cannot exceed 50 characters"),
+    .min(3, "First name must be at least 3 characters")
+    .max(100, "First name cannot exceed 100 characters"),
+  lastName: z
+    .string()
+    .min(3, "Last name must be at least 3 characters")
+    .max(100, "Last name cannot exceed 100 characters"),
 
   email: z.email("Invalid email address"),
 
