@@ -13,6 +13,8 @@ import {
   HTTP_STATUS,
   LOG_EVENTS,
 } from "../../constants/index.js";
+import { generateVerificationTokenRaw } from "../../utils/auth/verificationToken.js";
+import { sha256Hex } from "../../utils/auth/sha256Hex.js";
 
 /**
  * @desc    Signup User
@@ -40,6 +42,12 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const encryptPassword = await hashPassword(password);
+
+  const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
+  const tokenHash = sha256Hex(rawToken);
+
+  const ip =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.ip;
 
   const user = await prisma.user.create({
     data: {
