@@ -7,9 +7,11 @@ import hpp from "hpp";
 
 import { morganMiddleware } from "./config/morgan.js";
 
-import { notFoundHandler } from "./middlewares/notFound.middleware.js";
-import { globalErrorHandler } from "./middlewares/error.middleware.js";
-import { adminRoutes, authRoutes, userRoutes } from "./routes/v1/index.js";
+import { notFoundHandler } from "./shared/middlewares/notFound.middleware.js";
+import { globalErrorHandler } from "./shared/middlewares/error.middleware.js";
+import authRoutes from "./modules/auth/auth.routes.js";
+import userRoutes from "./modules/user/user.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 
 const app: Application = express();
 

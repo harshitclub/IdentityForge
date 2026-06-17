@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { apiResponse } from "../../utils/apiResponse.js";
+import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { apiResponse } from "../../shared/utils/apiResponse.js";
 
 /**
  * @desc    Get All Users

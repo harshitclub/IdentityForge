@@ -1,20 +1,20 @@
 import type { Request, Response } from "express";
 
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { apiResponse } from "../../utils/apiResponse.js";
-import { AppError } from "../../utils/appError.js";
+import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { apiResponse } from "../../shared/utils/apiResponse.js";
+import { AppError } from "../../shared/utils/appError.js";
 import { logger } from "../../config/logger.js";
-import { maskEmail } from "../../utils/mask.js";
-import { hashPassword } from "../../utils/auth/password.js";
+import { maskEmail } from "../../shared/utils/mask.js";
+import { hashPassword } from "../../shared/utils/auth/password.js";
 import { prisma } from "../../config/prisma.js";
-import { createLogContext } from "../../utils/loggerContext.js";
+import { createLogContext } from "../../shared/utils/loggerContext.js";
 import {
   ERROR_MESSAGES,
   HTTP_STATUS,
   LOG_EVENTS,
 } from "../../constants/index.js";
-import { generateVerificationTokenRaw } from "../../utils/auth/verificationToken.js";
-import { sha256Hex } from "../../utils/auth/sha256Hex.js";
+import { generateVerificationTokenRaw } from "../../shared/utils/auth/verificationToken.js";
+import { sha256Hex } from "../../shared/utils/auth/sha256Hex.js";
 
 /**
  * @desc    Signup User

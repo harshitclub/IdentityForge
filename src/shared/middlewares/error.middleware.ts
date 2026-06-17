@@ -6,9 +6,13 @@ import jwt from "jsonwebtoken";
 import { AppError } from "../utils/appError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 
-import { logger } from "../config/logger.js";
 import { createLogContext } from "../utils/loggerContext.js";
-import { ERROR_MESSAGES, HTTP_STATUS, LOG_EVENTS } from "../constants/index.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../constants/index.js";
+import { logger } from "../../config/logger.js";
 
 export const globalErrorHandler = (
   err: any,
