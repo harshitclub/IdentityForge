@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 import { AppError } from "../utils/appError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 
-import { createLogContext } from "../utils/loggerContext.js";
 import {
   ERROR_MESSAGES,
   HTTP_STATUS,
@@ -63,15 +62,14 @@ export const globalErrorHandler = (
   /**
    * Winston Logging
    */
-  logger.error(
-    createLogContext(LOG_EVENTS.UNHANDLED_EXCEPTION, {
-      operation: "globalErrorHandler",
-      method: req.method,
-      path: req.originalUrl,
-      statusCode,
-      error: err,
-    }),
-  );
+  logger.error("Unhandled exception", {
+    event: LOG_EVENTS.UNHANDLED_EXCEPTION,
+    operation: "globalErrorHandler",
+    method: req.method,
+    path: req.originalUrl,
+    statusCode,
+    error: err,
+  });
 
   /**
    * Development Response

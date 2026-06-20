@@ -12,6 +12,8 @@ export const ERROR_MESSAGES = {
   ACCOUNT_LOCKED: "Account is temporarily locked. Please try again later.",
   INVALID_TOKEN: "Invalid token.",
   TOKEN_EXPIRED: "Token has expired.",
+  ACCESS_TOKEN_INVALID: "Access token is invalid",
+  ACCESS_TOKEN_EXPIRED: "Access token has expired.",
   REFRESH_TOKEN_INVALID: "Refresh token is invalid.",
   REFRESH_TOKEN_EXPIRED: "Refresh token has expired.",
   EMAIL_VERIFICATION_TOKEN_INVALID: "Email verification token is invalid.",

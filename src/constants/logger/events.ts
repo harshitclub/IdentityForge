@@ -180,6 +180,21 @@ export const LOG_EVENTS = {
 
   /**
    * ===================================
+   * SMTP
+   * ===================================
+   */
+  SMTP_READY: "SMTP_READY",
+
+  SMTP_CONNECTION_FAILED: "SMTP_CONNECTION_FAILED",
+
+  EMAIL_QUEUED: "EMAIL_QUEUED",
+
+  EMAIL_SENT: "EMAIL_SENT",
+
+  EMAIL_SEND_FAILED: "EMAIL_SEND_FAILED",
+
+  /**
+   * ===================================
    * Rate Limiting
    * ===================================
    */

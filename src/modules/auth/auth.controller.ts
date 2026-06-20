@@ -7,14 +7,17 @@ import { logger } from "../../config/logger.js";
 import { maskEmail } from "../../shared/utils/mask.js";
 import { hashPassword } from "../../shared/utils/auth/password.js";
 import { prisma } from "../../config/prisma.js";
-import { createLogContext } from "../../shared/utils/loggerContext.js";
 import {
   ERROR_MESSAGES,
   HTTP_STATUS,
-  LOG_EVENTS,
+  SUCCESS_MESSAGES,
 } from "../../constants/index.js";
 import { generateVerificationTokenRaw } from "../../shared/utils/auth/verificationToken.js";
 import { sha256Hex } from "../../shared/utils/auth/sha256Hex.js";
+import { env } from "../../config/env.js";
+import { sendVerificationEmail } from "../../emails/email.service.js";
+import { emailQueue } from "../../jobs/queues/email.queue.js";
+import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
 
 /**
  * @desc    Signup User
@@ -30,10 +33,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   if (existingUser) {
     logger.warn(
-      createLogContext(LOG_EVENTS.USER_ALREADY_EXISTS, {
-        operation: "signup",
-        email: maskEmail(email),
-      }),
+      `Signup blocked: Email already exists | email=${maskEmail(email)}`,
     );
     throw new AppError(
       ERROR_MESSAGES.USER_ALREADY_EXISTS,
@@ -41,7 +41,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const encryptPassword = await hashPassword(password);
+  const hashedPassword = await hashPassword(password);
 
   const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
   const tokenHash = sha256Hex(rawToken);
@@ -49,19 +49,38 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   const ip =
     (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.ip;
 
-  const user = await prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      password: encryptPassword,
-    },
+  const user = await prisma.$transaction(async (tx) => {
+    const createdUser = await tx.user.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+      },
+    });
+    await tx.emailVerificationToken.create({
+      data: {
+        userId: createdUser.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+    return createdUser;
   });
+
+  const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${rawToken}`;
+
+  await emailQueue.add(EMAIL_JOBS.VERIFICATION, {
+    email: user.email,
+    firstName: user.firstName ?? "User",
+    verificationUrl,
+  });
+  logger.info(`Verification email job queued for ${user.email}`);
 
   return apiResponse({
     req,
     res,
-    message: "Signup successful",
+    message: SUCCESS_MESSAGES.SIGNUP_SUCCESS,
   });
 });
 

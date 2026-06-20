@@ -5,10 +5,9 @@ import jwt, {
   TokenExpiredError,
   type JwtPayload,
 } from "jsonwebtoken";
-import { env } from "../../config/env.js";
-import { logger } from "../../config/logger.js";
-import { createLogContext } from "../loggerContext.js";
-import { LOG_EVENTS } from "../../constants/index.js";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
+import { ERROR_MESSAGES } from "../../../constants/index.js";
 
 export interface RefreshTokenPayload {
   id: string;
@@ -35,33 +34,18 @@ export const verifyRefreshToken = (token: string): JwtPayload => {
     return jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
   } catch (error) {
     if (error instanceof TokenExpiredError) {
-      logger.warn(
-        createLogContext(LOG_EVENTS.REFRESH_TOKEN_EXPIRED, {
-          operation: "verifyRefreshToken",
-          expiredAt: error.expiredAt.toISOString(),
-        }),
-      );
+      logger.warn(ERROR_MESSAGES.REFRESH_TOKEN_EXPIRED);
 
       throw error;
     }
 
     if (error instanceof JsonWebTokenError || error instanceof NotBeforeError) {
-      logger.warn(
-        createLogContext(LOG_EVENTS.REFRESH_TOKEN_INVALID, {
-          operation: "verifyRefreshToken",
-          reason: error.message,
-        }),
-      );
+      logger.warn(ERROR_MESSAGES.REFRESH_TOKEN_INVALID);
 
       throw error;
     }
 
-    logger.error(
-      createLogContext(LOG_EVENTS.REFRESH_TOKEN_VERIFICATION_ERROR, {
-        operation: "verifyRefreshToken",
-        error,
-      }),
-    );
+    logger.error(`Refresh Token Verification Error`);
 
     throw error;
   }
@@ -71,12 +55,7 @@ export const decodeRefreshToken = (token: string) => {
   try {
     return jwt.decode(token);
   } catch (error) {
-    logger.error(
-      createLogContext(LOG_EVENTS.REFRESH_TOKEN_DECODE_FAILED, {
-        operation: "decodeRefreshToken",
-        error,
-      }),
-    );
+    logger.error(`Refresh Token Decode Failed`);
 
     return null;
   }
