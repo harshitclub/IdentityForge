@@ -62,14 +62,24 @@ export const globalErrorHandler = (
   /**
    * Winston Logging
    */
-  logger.error("Unhandled exception", {
-    event: LOG_EVENTS.UNHANDLED_EXCEPTION,
-    operation: "globalErrorHandler",
-    method: req.method,
-    path: req.originalUrl,
-    statusCode,
-    error: err,
-  });
+  if (err instanceof AppError) {
+    logger.warn(message, {
+      event: LOG_EVENTS.OPERATIONAL_ERROR,
+      operation: "globalErrorHandler",
+      method: req.method,
+      path: req.originalUrl,
+      statusCode,
+    });
+  } else {
+    logger.error("Unhandled exception", {
+      event: LOG_EVENTS.UNHANDLED_EXCEPTION,
+      operation: "globalErrorHandler",
+      method: req.method,
+      path: req.originalUrl,
+      statusCode,
+      error: err,
+    });
+  }
 
   /**
    * Development Response

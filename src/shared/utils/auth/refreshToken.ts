@@ -1,10 +1,5 @@
 import crypto from "crypto";
-import jwt, {
-  JsonWebTokenError,
-  NotBeforeError,
-  TokenExpiredError,
-  type JwtPayload,
-} from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../../../config/env.js";
 import { logger } from "../../../config/logger.js";
 import { ERROR_MESSAGES } from "../../../constants/index.js";
@@ -33,13 +28,16 @@ export const verifyRefreshToken = (token: string): JwtPayload => {
   try {
     return jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
+    if (error instanceof jwt.TokenExpiredError) {
       logger.warn(ERROR_MESSAGES.REFRESH_TOKEN_EXPIRED);
 
       throw error;
     }
 
-    if (error instanceof JsonWebTokenError || error instanceof NotBeforeError) {
+    if (
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.NotBeforeError
+    ) {
       logger.warn(ERROR_MESSAGES.REFRESH_TOKEN_INVALID);
 
       throw error;

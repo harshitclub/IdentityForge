@@ -5,7 +5,10 @@ import { apiResponse } from "../../shared/utils/apiResponse.js";
 import { AppError } from "../../shared/utils/appError.js";
 import { logger } from "../../config/logger.js";
 import { maskEmail } from "../../shared/utils/mask.js";
-import { hashPassword } from "../../shared/utils/auth/password.js";
+import {
+  comparePassword,
+  hashPassword,
+} from "../../shared/utils/auth/password.js";
 import { prisma } from "../../config/prisma.js";
 import {
   ERROR_MESSAGES,
@@ -18,6 +21,8 @@ import { env } from "../../config/env.js";
 import { sendVerificationEmail } from "../../emails/email.service.js";
 import { emailQueue } from "../../jobs/queues/email.queue.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
+import { generateAccessToken } from "../../shared/utils/auth/accessToken.js";
+import { generateRefreshTokenWithJti } from "../../shared/utils/auth/refreshToken.js";
 
 /**
  * @desc    Signup User
@@ -45,9 +50,6 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
   const tokenHash = sha256Hex(rawToken);
-
-  const ip =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.ip;
 
   const user = await prisma.$transaction(async (tx) => {
     const createdUser = await tx.user.create({
@@ -81,6 +83,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     req,
     res,
     message: SUCCESS_MESSAGES.SIGNUP_SUCCESS,
+    data: {},
   });
 });
 
@@ -89,10 +92,158 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
  * @route   POST /api/v1/auth/login
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  const now = new Date();
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      role: true,
+      password: true,
+      failedLoginAttempts: true,
+      lockUntil: true,
+    },
+  });
+
+  // Generic error (Don't reveal if user exists)
+  if (!user) {
+    throw new AppError(
+      ERROR_MESSAGES.INVALID_CREDENTIALS,
+      HTTP_STATUS.UNAUTHORIZED,
+    );
+  }
+
+  // Account is currently locked
+  if (user.lockUntil && user.lockUntil > now) {
+    logger.warn(`Login blocked: Account locked | userId=${user.id}`);
+
+    throw new AppError(ERROR_MESSAGES.ACCOUNT_LOCKED, HTTP_STATUS.FORBIDDEN);
+  }
+
+  // Password verification
+  const isPasswordValid = await comparePassword(password, user.password!);
+
+  if (!isPasswordValid) {
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: {
+          increment: 1,
+        },
+      },
+      select: {
+        failedLoginAttempts: true,
+      },
+    });
+
+    if (updatedUser.failedLoginAttempts >= env.MAX_FAILED_LOGIN) {
+      const lockUntil = new Date(
+        Date.now() + env.ACCOUNT_LOCK_DURATION * 60 * 1000,
+      );
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          lockUntil,
+        },
+      });
+
+      logger.warn(`Account locked | userId=${user.id}`);
+
+      throw new AppError(ERROR_MESSAGES.ACCOUNT_LOCKED, HTTP_STATUS.FORBIDDEN);
+    }
+
+    throw new AppError(
+      ERROR_MESSAGES.INVALID_CREDENTIALS,
+      HTTP_STATUS.UNAUTHORIZED,
+    );
+  }
+  // Successful login
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      failedLoginAttempts: 0,
+      lockUntil: null,
+      lastLoginAt: now,
+    },
+  });
+
+  const accessToken = generateAccessToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  const { token: refreshJwt, jti } = generateRefreshTokenWithJti({
+    id: user.id,
+  });
+
+  const refreshJtiHash = sha256Hex(jti);
+  const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: refreshJtiHash,
+        expiresAt: refreshExpiresAt,
+      },
+    });
+
+    await tx.session.create({
+      data: {
+        userId: user.id,
+        ipAddress: req.ip ?? null,
+        userAgent: req.headers["user-agent"]?.toString() ?? null,
+        isCurrent: true,
+        expiresAt: refreshExpiresAt,
+      },
+    });
+
+    await tx.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        failedLoginAttempts: 0,
+        lockUntil: null,
+        lastLoginAt: now,
+      },
+    });
+  });
+
+  res.cookie("if_accessToken", accessToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_ACCESS_EXPIRES_IN * 1000,
+  });
+
+  res.cookie("if_refreshToken", refreshJwt, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_REFRESH_EXPIRES_IN * 1000,
+  });
+
+  const safeUser = {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    role: user.role,
+  };
   return apiResponse({
     req,
     res,
-    message: "Login successful",
+    message: SUCCESS_MESSAGES.LOGIN_SUCCESS,
+    data: safeUser,
   });
 });
 

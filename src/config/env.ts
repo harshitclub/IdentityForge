@@ -26,6 +26,9 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number(),
   SMTP_USER: z.string(),
   SMTP_PASS: z.string(),
+
+  MAX_FAILED_LOGIN: z.coerce.number(),
+  ACCOUNT_LOCK_DURATION: z.coerce.number(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

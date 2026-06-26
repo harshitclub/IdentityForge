@@ -13,7 +13,7 @@ import {
   verifyEmail,
 } from "./auth.controller.js";
 import { validate } from "../../shared/middlewares/validate.middleware.js";
-import { registerSchema } from "./auth.validator.js";
+import { loginSchema, registerSchema } from "./auth.validator.js";
 
 const authRoutes = Router();
 
@@ -22,7 +22,7 @@ const authRoutes = Router();
  */
 authRoutes.post("/signup", validate(registerSchema), signup);
 
-authRoutes.post("/login", login);
+authRoutes.post("/login", validate(loginSchema), login);
 
 authRoutes.post("/logout", logout);
 

@@ -1,9 +1,4 @@
-import jwt, {
-  JsonWebTokenError,
-  NotBeforeError,
-  TokenExpiredError,
-  type JwtPayload,
-} from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 
 import { AppError } from "../appError.js";
 import type { UserRole } from "../../../generated/prisma/enums.js";
@@ -30,7 +25,7 @@ export const verifyAccessToken = (
     return jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload &
       AccessTokenPayload;
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
+    if (error instanceof jwt.TokenExpiredError) {
       logger.warn(ERROR_MESSAGES.ACCESS_TOKEN_EXPIRED);
 
       throw new AppError(
@@ -39,7 +34,10 @@ export const verifyAccessToken = (
       );
     }
 
-    if (error instanceof JsonWebTokenError || error instanceof NotBeforeError) {
+    if (
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.NotBeforeError
+    ) {
       logger.warn(ERROR_MESSAGES.ACCESS_TOKEN_INVALID);
 
       throw new AppError(
