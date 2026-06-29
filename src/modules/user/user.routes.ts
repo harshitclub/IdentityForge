@@ -17,8 +17,6 @@ userRoutes.get("/profile", getProfile);
 
 userRoutes.patch("/profile", updateProfile);
 
-userRoutes.patch("/avatar", updateAvatar);
-
 userRoutes.delete("/account", deleteAccount);
 
 userRoutes.get("/sessions", getSessions);

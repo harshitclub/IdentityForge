@@ -22,7 +22,11 @@ import { sendVerificationEmail } from "../../emails/email.service.js";
 import { emailQueue } from "../../jobs/queues/email.queue.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
 import { generateAccessToken } from "../../shared/utils/auth/accessToken.js";
-import { generateRefreshTokenWithJti } from "../../shared/utils/auth/refreshToken.js";
+import {
+  generateRefreshTokenWithJti,
+  verifyRefreshToken,
+} from "../../shared/utils/auth/refreshToken.js";
+import { cacheRedis } from "../../config/redis.js";
 
 /**
  * @desc    Signup User
@@ -110,7 +114,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  // Generic error (Don't reveal if user exists)
+  // Generic error
   if (!user) {
     throw new AppError(
       ERROR_MESSAGES.INVALID_CREDENTIALS,
@@ -265,10 +269,108 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
+    // Read refresh cookie
+    const { if_refreshToken: refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+      logger.warn("Refresh token cookie missing.");
+      throw new AppError(
+        ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
+        HTTP_STATUS.UNAUTHORIZED,
+      );
+    }
+
+    // Verify JWT signature & expiration
+    const tokenPayload = verifyRefreshToken(refreshToken);
+
+    // Hash JTI
+    const refreshJtiHash = sha256Hex(tokenPayload.jti!);
+
+    // Verify refresh token exists
+    const storedRefreshToken = await prisma.refreshToken.findUnique({
+      where: {
+        tokenHash: refreshJtiHash,
+      },
+    });
+
+    if (!storedRefreshToken) {
+      logger.warn(`Refresh token revoked | userId=${tokenPayload.id}`);
+
+      throw new AppError(
+        ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
+        HTTP_STATUS.UNAUTHORIZED,
+      );
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: {
+        id: tokenPayload.id,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Generate new access token
+    const accessToken = generateAccessToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Generate new refresh token
+    const { token: newRefreshToken, jti } = generateRefreshTokenWithJti({
+      id: user.id,
+    });
+
+    const newRefreshJtiHash = sha256Hex(jti);
+
+    const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
+
+    // Rotate refresh token
+    await prisma.$transaction(async (tx) => {
+      await tx.refreshToken.delete({
+        where: {
+          tokenHash: refreshJtiHash,
+        },
+      });
+
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: newRefreshJtiHash,
+          expiresAt: refreshExpiresAt,
+        },
+      });
+    });
+
+    // Set new cookies
+    res.cookie("if_accessToken", accessToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: env.JWT_ACCESS_EXPIRES_IN * 1000,
+    });
+
+    res.cookie("if_refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: env.JWT_REFRESH_EXPIRES_IN * 1000,
+    });
+
     return apiResponse({
       req,
       res,
       message: "Token refreshed successfully",
+      data: {},
     });
   },
 );
@@ -278,10 +380,69 @@ export const refreshToken = asyncHandler(
  * @route   POST /api/v1/auth/verify-email
  */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+  const token = req.query.token;
+
+  if (!token || typeof token !== "string") {
+    throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  const tokenHash = sha256Hex(token);
+
+  const verificationToken = await prisma.emailVerificationToken.findUnique({
+    where: {
+      tokenHash,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          isEmailVerified: true,
+        },
+      },
+    },
+  });
+
+  if (!verificationToken) {
+    throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (verificationToken.expiresAt < new Date()) {
+    throw new AppError(ERROR_MESSAGES.TOKEN_EXPIRED, HTTP_STATUS.BAD_REQUEST);
+  }
+
+  if (verificationToken.user.isEmailVerified) {
+    throw new AppError(
+      ERROR_MESSAGES.EMAIL_ALREADY_VERIFIED,
+      HTTP_STATUS.CONFLICT,
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        id: verificationToken.user.id,
+      },
+      data: {
+        isEmailVerified: true,
+      },
+    });
+
+    await tx.emailVerificationToken.delete({
+      where: {
+        id: verificationToken.id,
+      },
+    });
+  });
+
+  logger.info(
+    `Email verified successfully | userId=${verificationToken.user.id}`,
+  );
+
   return apiResponse({
     req,
     res,
-    message: "Email verified successfully",
+    message: SUCCESS_MESSAGES.EMAIL_VERIFIED_SUCCESS,
+    data: {},
   });
 });
 
@@ -346,10 +507,59 @@ export const changePassword = asyncHandler(
  * @route   GET /api/v1/auth/me
  */
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.user;
+
+  // TODO:
+  // Check Redis cache first (key: user:${id})
+  // If found, return cached user.
+  // Otherwise fetch from database, cache it, then return.
+  const cacheKey = `user:${id}`;
+
+  // 1. Check cache
+  const cachedUser = await cacheRedis.get(cacheKey);
+
+  if (cachedUser) {
+    return apiResponse({
+      req,
+      res,
+      message: "Current user fetched successfully",
+      data: {
+        user: JSON.parse(cachedUser),
+      },
+      cached: true,
+    });
+  }
+
+  // 2. Fetch from database
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      email: true,
+      role: true,
+      isEmailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+      lastLoginAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+  }
+
+  // 3. Cache user for 5 minutes
+  await cacheRedis.set(cacheKey, JSON.stringify(user), "EX", 60 * 5);
+
   return apiResponse({
     req,
     res,
     message: "Current user fetched successfully",
+    data: { user },
+    cached: false,
   });
 });
 

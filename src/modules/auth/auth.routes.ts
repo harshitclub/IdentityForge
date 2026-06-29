@@ -14,6 +14,7 @@ import {
 } from "./auth.controller.js";
 import { validate } from "../../shared/middlewares/validate.middleware.js";
 import { loginSchema, registerSchema } from "./auth.validator.js";
+import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
 
 const authRoutes = Router();
 
@@ -38,7 +39,7 @@ authRoutes.post("/reset-password", resetPassword);
 
 authRoutes.post("/change-password", changePassword);
 
-authRoutes.get("/me", getMe);
+authRoutes.get("/me", authenticateUser, getMe);
 
 authRoutes.post("/revoke-all-sessions", revokeAllSessions);
 

@@ -10,6 +10,8 @@ interface ApiResponseOptions<T> {
 
   data?: T;
   errors?: unknown;
+
+  cached?: boolean;
 }
 
 export const apiResponse = <T>({
@@ -22,6 +24,7 @@ export const apiResponse = <T>({
 
   data,
   errors,
+  cached,
 }: ApiResponseOptions<T>) => {
   return res.status(statusCode).json({
     success,
@@ -35,6 +38,7 @@ export const apiResponse = <T>({
       timestamp: new Date().toISOString(),
       method: req.method,
       path: req.originalUrl,
+      ...(cached !== undefined ? { cached } : {}),
     },
   });
 };

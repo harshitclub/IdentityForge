@@ -6,6 +6,7 @@ export const ERROR_MESSAGES = {
   USER_ALREADY_EXISTS: "User already exists.",
   USER_NOT_FOUND: "User not found.",
   EMAIL_NOT_VERIFIED: "Email address is not verified.",
+  EMAIL_ALREADY_VERIFIED: "Email address already verified",
   ACCOUNT_SUSPENDED: "Account has been suspended.",
   ACCOUNT_BANNED: "Account has been banned.",
   ACCOUNT_DELETED: "Account has been deleted.",
