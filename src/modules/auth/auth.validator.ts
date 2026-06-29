@@ -30,3 +30,14 @@ export const loginSchema = z.object({
   email: z.email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
+
+/**
+ * Change Password Schema
+ */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(32, "Password cannot exceed 32 characters"),
+});

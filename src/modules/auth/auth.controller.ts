@@ -494,10 +494,75 @@ export const resetPassword = asyncHandler(
  */
 export const changePassword = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id } = req.user;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Verify current password
+    const isPasswordValid = await comparePassword(
+      currentPassword,
+      user.password!,
+    );
+
+    if (!isPasswordValid) {
+      throw new AppError(
+        ERROR_MESSAGES.CURRENT_PASSWORD_INCORRECT,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    // Prevent using the same password again
+    const isSamePassword = await comparePassword(newPassword, user.password!);
+
+    if (isSamePassword) {
+      throw new AppError(ERROR_MESSAGES.SAME_PASSWORD, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      // Logout from all devices
+      await tx.refreshToken.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+
+      await tx.session.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+    });
+
+    // Invalidate cached profile
+    await cacheRedis.del(`user:${user.id}`);
+
+    // Clear auth cookies
+    res.clearCookie("if_accessToken");
+    res.clearCookie("if_refreshToken");
     return apiResponse({
       req,
       res,
-      message: "Password changed successfully",
+      message: SUCCESS_MESSAGES.PASSWORD_CHANGED_SUCCESS,
     });
   },
 );
@@ -509,10 +574,6 @@ export const changePassword = asyncHandler(
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.user;
 
-  // TODO:
-  // Check Redis cache first (key: user:${id})
-  // If found, return cached user.
-  // Otherwise fetch from database, cache it, then return.
   const cacheKey = `user:${id}`;
 
   // 1. Check cache
@@ -522,7 +583,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
     return apiResponse({
       req,
       res,
-      message: "Current user fetched successfully",
+      message: SUCCESS_MESSAGES.PROFILE_FETCHED_SUCCESS,
       data: {
         user: JSON.parse(cachedUser),
       },
@@ -557,7 +618,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
   return apiResponse({
     req,
     res,
-    message: "Current user fetched successfully",
+    message: SUCCESS_MESSAGES.PROFILE_FETCHED_SUCCESS,
     data: { user },
     cached: false,
   });

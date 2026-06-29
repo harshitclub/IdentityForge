@@ -13,7 +13,11 @@ import {
   verifyEmail,
 } from "./auth.controller.js";
 import { validate } from "../../shared/middlewares/validate.middleware.js";
-import { loginSchema, registerSchema } from "./auth.validator.js";
+import {
+  changePasswordSchema,
+  loginSchema,
+  registerSchema,
+} from "./auth.validator.js";
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
 
 const authRoutes = Router();
@@ -37,7 +41,12 @@ authRoutes.post("/forgot-password", forgotPassword);
 
 authRoutes.post("/reset-password", resetPassword);
 
-authRoutes.post("/change-password", changePassword);
+authRoutes.post(
+  "/change-password",
+  authenticateUser,
+  validate(changePasswordSchema),
+  changePassword,
+);
 
 authRoutes.get("/me", authenticateUser, getMe);
 

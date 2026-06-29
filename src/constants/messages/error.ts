@@ -24,6 +24,7 @@ export const ERROR_MESSAGES = {
   PASSWORD_RESET_TOKEN_USED: "Password reset token has already been used.",
   PASSWORD_INCORRECT: "Current password is incorrect.",
   SAME_PASSWORD: "New password must be different from the current password.",
+  CURRENT_PASSWORD_INCORRECT: "Current password is incorrent.",
   UNAUTHORIZED: "Unauthorized access.",
   FORBIDDEN: "You do not have permission to perform this action.",
   ADMIN_ONLY: "This action is restricted to administrators.",
