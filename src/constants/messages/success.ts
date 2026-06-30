@@ -4,7 +4,7 @@ export const SUCCESS_MESSAGES = {
   LOGOUT_SUCCESS: "Logout successful",
   TOKEN_REFRESH_SUCCESS: "Access token refreshed successfully",
   PASSWORD_RESET_EMAIL_SENT:
-    "Password reset instructions have been sent to your email.",
+    "If an account with this email exists, a password reset link has been sent.",
   PASSWORD_RESET_SUCCESS: "Password has been reset successfully.",
   PASSWORD_CHANGED_SUCCESS: "Password changed successfully.",
   EMAIL_VERIFIED_SUCCESS: "Email verified successfully.",

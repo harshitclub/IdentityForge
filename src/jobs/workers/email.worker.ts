@@ -1,5 +1,8 @@
 import { Worker } from "bullmq";
-import { sendVerificationEmail } from "../../emails/email.service.js";
+import {
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from "../../emails/email.service.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
@@ -12,7 +15,9 @@ export const emailWorker = new Worker(
       case EMAIL_JOBS.VERIFICATION:
         await sendVerificationEmail(job.data);
         break;
-
+      case EMAIL_JOBS.RESET_PASSWORD:
+        await sendResetPasswordEmail(job.data);
+        break;
       default:
         throw new Error(`Unknown email job: ${job.name}`);
     }

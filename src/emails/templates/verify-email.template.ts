@@ -20,7 +20,6 @@ export const verificationEmailTemplate = (
     </p>
 
     <p>
-      Thanks for creating your IdentityForge account.
       Please verify your email address to activate your account.
     </p>
 
@@ -33,7 +32,7 @@ export const verificationEmailTemplate = (
           color:#ffffff;
           text-decoration:none;
           padding:14px 28px;
-          border-radius:10px;
+          border-radius:5px;
           font-weight:600;
         "
       >
@@ -46,7 +45,7 @@ export const verificationEmailTemplate = (
     </p>
 
     <p>
-      If you did not create this account, you can safely ignore this email.
+      If you did not request the re-verification of this account, you can safely ignore this email.
     </p>
   `;
 

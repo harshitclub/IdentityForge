@@ -41,3 +41,20 @@ export const changePasswordSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .max(32, "Password cannot exceed 32 characters"),
 });
+
+/**
+ * Forget Password Schema
+ */
+export const forgetPasswordSchema = z.object({
+  email: z.email("Invalid email address"),
+});
+
+/**
+ * Reset Password Schema
+ */
+export const resetPasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(32, "Password cannot exceed 32 characters"),
+});

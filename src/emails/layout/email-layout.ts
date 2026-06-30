@@ -44,7 +44,7 @@ export const emailLayout = ({ title, content }: EmailLayoutProps): string => {
   style="
     max-width:600px;
     background:#ffffff;
-    border-radius:16px;
+    border-radius:5px;
     overflow:hidden;
     border:1px solid #e2e8f0;
   "

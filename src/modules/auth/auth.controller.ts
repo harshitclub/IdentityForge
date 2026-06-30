@@ -18,7 +18,6 @@ import {
 import { generateVerificationTokenRaw } from "../../shared/utils/auth/verificationToken.js";
 import { sha256Hex } from "../../shared/utils/auth/sha256Hex.js";
 import { env } from "../../config/env.js";
-import { sendVerificationEmail } from "../../emails/email.service.js";
 import { emailQueue } from "../../jobs/queues/email.queue.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
 import { generateAccessToken } from "../../shared/utils/auth/accessToken.js";
@@ -27,6 +26,7 @@ import {
   verifyRefreshToken,
 } from "../../shared/utils/auth/refreshToken.js";
 import { cacheRedis } from "../../config/redis.js";
+import { generateResetPasswordTokenRaw } from "../../shared/utils/auth/resetPasswordToken.js";
 
 /**
  * @desc    Signup User
@@ -256,10 +256,55 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
  * @route   POST /api/v1/auth/logout
  */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
+  const { if_refreshToken: refreshToken } = req.cookies;
+
+  // If cookies are already gone, logout is still successful.
+  if (!refreshToken) {
+    res.clearCookie("if_accessToken");
+    res.clearCookie("if_refreshToken");
+
+    return apiResponse({
+      req,
+      res,
+      message: SUCCESS_MESSAGES.LOGOUT_SUCCESS,
+    });
+  }
+
+  try {
+    const payload = verifyRefreshToken(refreshToken);
+
+    const refreshJtiHash = sha256Hex(payload.jti!);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({
+        where: {
+          tokenHash: refreshJtiHash,
+        },
+      });
+
+      await tx.session.deleteMany({
+        where: {
+          userId: payload.id,
+        },
+      });
+    });
+
+    // Invalidate cached profile
+    await cacheRedis.del(`user:${payload.id}`);
+
+    logger.info(`User logged out | userId=${payload.id}`);
+  } catch {
+    // Ignore invalid/expired refresh tokens.
+    // Logout should always succeed from the client's perspective.
+  }
+
+  res.clearCookie("if_accessToken");
+  res.clearCookie("if_refreshToken");
+
   return apiResponse({
     req,
     res,
-    message: "Logout successful",
+    message: SUCCESS_MESSAGES.LOGOUT_SUCCESS,
   });
 });
 
@@ -452,10 +497,63 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
  */
 export const resendVerification = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id } = req.user;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        isEmailVerified: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (user.isEmailVerified) {
+      throw new AppError(
+        ERROR_MESSAGES.EMAIL_ALREADY_VERIFIED,
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    // Remove any previous verification tokens
+    await prisma.emailVerificationToken.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    // Generate a fresh verification token
+    const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
+    const tokenHash = sha256Hex(rawToken);
+
+    await prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${rawToken}`;
+
+    await emailQueue.add(EMAIL_JOBS.VERIFICATION, {
+      email: user.email,
+      firstName: user.firstName ?? "User",
+      verificationUrl,
+    });
+
+    logger.info(
+      `Verification email re-queued | userId=${user.id} | email=${user.email}`,
+    );
+
     return apiResponse({
       req,
       res,
-      message: "Verification email sent successfully",
+      message: SUCCESS_MESSAGES.EMAIL_VERIFICATION_SENT,
     });
   },
 );
@@ -466,10 +564,61 @@ export const resendVerification = asyncHandler(
  */
 export const forgotPassword = asyncHandler(
   async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    // Prevent user enumeration
+    if (!user) {
+      return apiResponse({
+        req,
+        res,
+        message: SUCCESS_MESSAGES.PASSWORD_RESET_EMAIL_SENT,
+      });
+    }
+
+    // Invalidate any previous unused reset tokens
+    await prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+    });
+
+    // Generate a new reset token
+    const { raw: resetPasswordToken, expiresAt } =
+      generateResetPasswordTokenRaw();
+
+    const hashedResetPasswordToken = sha256Hex(resetPasswordToken);
+
+    // Store the hashed token
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashedResetPasswordToken,
+        expiresAt,
+      },
+    });
+
+    const resetPasswordUrl = `${env.FRONTEND_URL}/reset-password?token=${resetPasswordToken}`;
+
+    // Queue the email
+    await emailQueue.add(EMAIL_JOBS.RESET_PASSWORD, {
+      email: user.email,
+      resetPasswordUrl,
+    });
+    logger.info(`Password reset email queued for user ${user.id}`);
+
     return apiResponse({
       req,
       res,
-      message: "Password reset email sent successfully",
+      message: SUCCESS_MESSAGES.PASSWORD_RESET_EMAIL_SENT,
     });
   },
 );
@@ -480,10 +629,101 @@ export const forgotPassword = asyncHandler(
  */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
+    const token = req.query.token;
+    const { newPassword } = req.body;
+    if (!token || typeof token !== "string") {
+      throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const tokenHash = sha256Hex(token);
+
+    const passwordResetToken = await prisma.passwordResetToken.findUnique({
+      where: {
+        tokenHash,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            password: true,
+          },
+        },
+      },
+    });
+
+    if (!passwordResetToken) {
+      throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (passwordResetToken.usedAt) {
+      throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (passwordResetToken.expiresAt < new Date()) {
+      throw new AppError(ERROR_MESSAGES.TOKEN_EXPIRED, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Prevent reusing the same password
+    const isSamePassword = await comparePassword(
+      newPassword,
+      passwordResetToken.user.password!,
+    );
+
+    if (isSamePassword) {
+      throw new AppError(ERROR_MESSAGES.SAME_PASSWORD, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: passwordResetToken.user.id,
+        },
+        data: {
+          password: hashedPassword,
+          passwordChangedAt: new Date(),
+        },
+      });
+
+      await tx.passwordResetToken.update({
+        where: {
+          id: passwordResetToken.id,
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+
+      // Logout from all devices
+      await tx.refreshToken.deleteMany({
+        where: {
+          userId: passwordResetToken.user.id,
+        },
+      });
+
+      await tx.session.deleteMany({
+        where: {
+          userId: passwordResetToken.user.id,
+        },
+      });
+    });
+
+    // Invalidate cached profile
+    await cacheRedis.del(`user:${passwordResetToken.user.id}`);
+
+    // Clear auth cookies
+    res.clearCookie("if_accessToken");
+    res.clearCookie("if_refreshToken");
+
+    logger.info(
+      `Password reset successfully | userId=${passwordResetToken.user.id}`,
+    );
+
     return apiResponse({
       req,
       res,
-      message: "Password reset successful",
+      message: SUCCESS_MESSAGES.PASSWORD_RESET_SUCCESS,
     });
   },
 );
@@ -630,10 +870,35 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
  */
 export const revokeAllSessions = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id } = req.user;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({
+        where: {
+          userId: id,
+        },
+      });
+
+      await tx.session.deleteMany({
+        where: {
+          userId: id,
+        },
+      });
+    });
+
+    // Invalidate cached profile
+    await cacheRedis.del(`user:${id}`);
+
+    // Clear authentication cookies
+    res.clearCookie("if_accessToken");
+    res.clearCookie("if_refreshToken");
+
+    logger.info(`All sessions revoked | userId=${id}`);
+
     return apiResponse({
       req,
       res,
-      message: "All sessions revoked successfully",
+      message: SUCCESS_MESSAGES.ALL_SESSIONS_REVOKED_SUCCESS,
     });
   },
 );
