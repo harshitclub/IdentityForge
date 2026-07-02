@@ -12,6 +12,7 @@ import { globalErrorHandler } from "./shared/middlewares/error.middleware.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
+import { setupSwagger } from "./docs/swagger.js";
 
 const app: Application = express();
 
@@ -31,6 +32,8 @@ app.use(compression());
 app.use(hpp());
 
 app.disable("x-powered-by");
+
+setupSwagger(app);
 
 /**
  * API Routes
