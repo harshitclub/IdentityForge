@@ -13,6 +13,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import { setupSwagger } from "./docs/swagger.js";
+import systemRoutes from "./modules/system/system.routes.js";
 
 const app: Application = express();
 
@@ -43,6 +44,8 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 
 app.use("/api/v1/admin", adminRoutes);
+
+app.use("/system", systemRoutes);
 
 /**
  * 404 Handler

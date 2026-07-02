@@ -10,11 +10,6 @@ import {
 
 const userRoutes = Router();
 
-/**
- * User Routes
- */
-userRoutes.get("/profile", getProfile);
-
 userRoutes.patch("/profile", updateProfile);
 
 userRoutes.delete("/account", deleteAccount);

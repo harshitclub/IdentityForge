@@ -33,6 +33,10 @@ const options: swaggerJsdoc.Options = {
         name: "Admin",
         description: "Admin endpoints",
       },
+      {
+        name: "System",
+        description: "System endpoints",
+      },
     ],
 
     components: {

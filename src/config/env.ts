@@ -4,6 +4,8 @@ import { z } from "zod";
 dotenv.config();
 
 const envSchema = z.object({
+  APP_NAME: z.string(),
+  APP_VERSION: z.string(),
   NODE_ENV: z.enum(["development", "production", "test"]),
 
   FRONTEND_URL: z.string(),
