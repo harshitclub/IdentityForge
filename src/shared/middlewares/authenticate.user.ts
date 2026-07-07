@@ -26,6 +26,7 @@ export async function authenticateUser(
       id: true,
       role: true,
       lockUntil: true,
+      status: true,
     },
   });
 
@@ -34,6 +35,10 @@ export async function authenticateUser(
       ERROR_MESSAGES.ACCESS_TOKEN_INVALID,
       HTTP_STATUS.UNAUTHORIZED,
     );
+  }
+
+  if (user.status === "DELETED") {
+    throw new AppError(ERROR_MESSAGES.ACCOUNT_DELETED, HTTP_STATUS.FORBIDDEN);
   }
 
   if (user.lockUntil && user.lockUntil > new Date()) {

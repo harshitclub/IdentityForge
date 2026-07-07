@@ -11,6 +11,7 @@ export const ERROR_MESSAGES = {
   ACCOUNT_SUSPENDED: "Account has been suspended.",
   ACCOUNT_BANNED: "Account has been banned.",
   ACCOUNT_DELETED: "Account has been deleted.",
+  ACCOUNT_ALREADY_DELETED: "Account has already been deleted.",
   ACCOUNT_LOCKED: "Account is temporarily locked. Please try again later.",
   INVALID_TOKEN: "Invalid token.",
   TOKEN_EXPIRED: "Token has expired.",
@@ -32,6 +33,8 @@ export const ERROR_MESSAGES = {
   SESSION_NOT_FOUND: "Session not found.",
   SESSION_EXPIRED: "Session has expired.",
   SESSION_REVOKED: "Session has been revoked.",
+  CURRENT_SESSION_CANNOT_BE_REVOKED:
+    "Current session cannot be revoked. Please use the logout endpoint instead.",
   DATABASE_ERROR: "Database operation failed.",
   DUPLICATE_RECORD: "Record already exists.",
   RESOURCE_NOT_FOUND: "Requested resource not found.",

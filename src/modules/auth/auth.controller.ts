@@ -112,6 +112,8 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       password: true,
       failedLoginAttempts: true,
       lockUntil: true,
+      deletedAt: true,
+      status: true,
     },
   });
 
@@ -121,6 +123,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       ERROR_MESSAGES.INVALID_CREDENTIALS,
       HTTP_STATUS.UNAUTHORIZED,
     );
+  }
+
+  // Account has been deleted
+  if (user.status === "DELETED") {
+    logger.warn(`Login blocked: Deleted account | userId=${user.id}`);
+
+    throw new AppError(ERROR_MESSAGES.ACCOUNT_DELETED, HTTP_STATUS.FORBIDDEN);
   }
 
   // Account is currently locked
@@ -168,15 +177,6 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       HTTP_STATUS.UNAUTHORIZED,
     );
   }
-  // Successful login
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      failedLoginAttempts: 0,
-      lockUntil: null,
-      lastLoginAt: now,
-    },
-  });
 
   const accessToken = generateAccessToken({
     id: user.id,

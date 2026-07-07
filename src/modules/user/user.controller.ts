@@ -88,10 +88,66 @@ export const updateProfile = asyncHandler(
  */
 export const deleteAccount = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id } = req.user;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        id: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (user.deletedAt) {
+      throw new AppError(
+        ERROR_MESSAGES.ACCOUNT_ALREADY_DELETED,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Soft delete user
+      await tx.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          deletedAt: new Date(),
+          status: "DELETED",
+        },
+      });
+
+      // Logout from all devices
+      await tx.refreshToken.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+
+      await tx.session.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+    });
+
+    // Remove cached profile
+    await cacheRedis.del(`user:${user.id}`);
+
+    // Clear authentication cookies
+    res.clearCookie("if_accessToken");
+    res.clearCookie("if_refreshToken");
+
     return apiResponse({
       req,
       res,
-      message: "Account deleted successfully",
+      message: SUCCESS_MESSAGES.ACCOUNT_DELETED_SUCCESS,
     });
   },
 );
@@ -145,6 +201,50 @@ export const getSessions = asyncHandler(async (req: Request, res: Response) => {
  */
 export const revokeSession = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id } = req.user;
+    const sessionId = req.params.sessionId as string;
+
+    // Find session
+    const session = await prisma.session.findUnique({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        isCurrent: true,
+      },
+    });
+
+    // Session not found
+    if (!session) {
+      throw new AppError(
+        ERROR_MESSAGES.SESSION_NOT_FOUND,
+        HTTP_STATUS.NOT_FOUND,
+      );
+    }
+
+    // Prevent revoking someone else's session
+    if (session.userId !== id) {
+      throw new AppError(ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
+    }
+
+    // Prevent revoking current session
+    if (session.isCurrent) {
+      throw new AppError(
+        ERROR_MESSAGES.CURRENT_SESSION_CANNOT_BE_REVOKED,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    // Delete session
+    // RefreshToken(s) are automatically deleted via onDelete: Cascade
+    await prisma.session.delete({
+      where: {
+        id: session.id,
+      },
+    });
+
     return apiResponse({
       req,
       res,

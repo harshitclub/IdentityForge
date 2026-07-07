@@ -18,10 +18,10 @@ userRoutes.patch(
   updateProfile,
 );
 
-userRoutes.delete("/account", deleteAccount);
+userRoutes.delete("/account", authenticateUser, deleteAccount);
 
 userRoutes.get("/sessions", authenticateUser, getSessions);
 
-userRoutes.delete("/sessions/:sessionId", revokeSession);
+userRoutes.delete("/sessions/:sessionId", authenticateUser, revokeSession);
 
 export default userRoutes;
