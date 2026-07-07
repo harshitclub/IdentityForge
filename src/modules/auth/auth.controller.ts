@@ -27,6 +27,7 @@ import {
 } from "../../shared/utils/auth/refreshToken.js";
 import { cacheRedis } from "../../config/redis.js";
 import { generateResetPasswordTokenRaw } from "../../shared/utils/auth/resetPasswordToken.js";
+import { getSessionMetadata } from "../../shared/utils/session.util.js";
 
 /**
  * @desc    Signup User
@@ -191,24 +192,29 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
 
   await prisma.$transaction(async (tx) => {
-    await tx.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: refreshJtiHash,
-        expiresAt: refreshExpiresAt,
-      },
-    });
+    const sessionMetadata = getSessionMetadata(req);
 
-    await tx.session.create({
+    // Create Session
+    const session = await tx.session.create({
       data: {
         userId: user.id,
-        ipAddress: req.ip ?? null,
-        userAgent: req.headers["user-agent"]?.toString() ?? null,
+        ...sessionMetadata,
         isCurrent: true,
         expiresAt: refreshExpiresAt,
       },
     });
 
+    // Create Refresh Token linked to Session
+    await tx.refreshToken.create({
+      data: {
+        userId: user.id,
+        sessionId: session.id,
+        tokenHash: refreshJtiHash,
+        expiresAt: refreshExpiresAt,
+      },
+    });
+
+    // Reset login attempts
     await tx.user.update({
       where: {
         id: user.id,
@@ -314,11 +320,12 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
-    // Read refresh cookie
+    // Read refresh token cookie
     const { if_refreshToken: refreshToken } = req.cookies;
 
     if (!refreshToken) {
       logger.warn("Refresh token cookie missing.");
+
       throw new AppError(
         ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
         HTTP_STATUS.UNAUTHORIZED,
@@ -331,16 +338,30 @@ export const refreshToken = asyncHandler(
     // Hash JTI
     const refreshJtiHash = sha256Hex(tokenPayload.jti!);
 
-    // Verify refresh token exists
+    // Find stored refresh token
     const storedRefreshToken = await prisma.refreshToken.findUnique({
       where: {
         tokenHash: refreshJtiHash,
+      },
+      select: {
+        id: true,
+        userId: true,
+        sessionId: true,
+        expiresAt: true,
       },
     });
 
     if (!storedRefreshToken) {
       logger.warn(`Refresh token revoked | userId=${tokenPayload.id}`);
 
+      throw new AppError(
+        ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
+        HTTP_STATUS.UNAUTHORIZED,
+      );
+    }
+
+    // Database expiry check
+    if (storedRefreshToken.expiresAt < new Date()) {
       throw new AppError(
         ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
         HTTP_STATUS.UNAUTHORIZED,
@@ -376,22 +397,34 @@ export const refreshToken = asyncHandler(
     });
 
     const newRefreshJtiHash = sha256Hex(jti);
-
     const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
 
     // Rotate refresh token
     await prisma.$transaction(async (tx) => {
+      // Delete old refresh token
       await tx.refreshToken.delete({
         where: {
           tokenHash: refreshJtiHash,
         },
       });
 
+      // Create new refresh token linked to same session
       await tx.refreshToken.create({
         data: {
           userId: user.id,
+          sessionId: storedRefreshToken.sessionId,
           tokenHash: newRefreshJtiHash,
           expiresAt: refreshExpiresAt,
+        },
+      });
+
+      // Update session activity
+      await tx.session.update({
+        where: {
+          id: storedRefreshToken.sessionId,
+        },
+        data: {
+          lastUsedAt: new Date(),
         },
       });
     });
@@ -414,7 +447,7 @@ export const refreshToken = asyncHandler(
     return apiResponse({
       req,
       res,
-      message: "Token refreshed successfully",
+      message: SUCCESS_MESSAGES.TOKEN_REFRESH_SUCCESS,
       data: {},
     });
   },
@@ -469,6 +502,7 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
       },
       data: {
         isEmailVerified: true,
+        status: "ACTIVE",
       },
     });
 

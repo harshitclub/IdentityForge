@@ -21,6 +21,7 @@ export const health = asyncHandler(async (req, res) => {
     },
   });
 });
+
 export const ready = asyncHandler(async (req, res) => {
   const { database, redis } = await checkDependencies();
 
@@ -40,6 +41,7 @@ export const ready = asyncHandler(async (req, res) => {
     },
   });
 });
+
 export const live = asyncHandler(async (req, res) => {
   return apiResponse({
     req,
@@ -51,6 +53,7 @@ export const live = asyncHandler(async (req, res) => {
     },
   });
 });
+
 export const version = asyncHandler(async (req, res) => {
   return apiResponse({
     req,
@@ -62,6 +65,7 @@ export const version = asyncHandler(async (req, res) => {
     },
   });
 });
+
 export const info = asyncHandler(async (req, res) => {
   const applicationInfo = getApplicationInfo();
 

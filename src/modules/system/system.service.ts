@@ -44,8 +44,8 @@ export const checkDependencies = async (): Promise<HealthStatus> => {
 
 export const getApplicationInfo = (): ApplicationInfo => {
   return {
-    name: "IdentityForge",
-    version: "1.0.0",
+    name: env.APP_NAME,
+    version: env.APP_VERSION,
     environment: env.NODE_ENV,
     nodeVersion: process.version,
     platform: process.platform,

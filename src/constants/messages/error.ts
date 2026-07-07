@@ -4,6 +4,7 @@ export const ERROR_MESSAGES = {
   REQUIRED_FIELDS_MISSING: "Required fields are missing.",
   INVALID_CREDENTIALS: "Invalid email or password.",
   USER_ALREADY_EXISTS: "User already exists.",
+  USERNAME_ALREADY_TAKEN: "Username is already taken",
   USER_NOT_FOUND: "User not found.",
   EMAIL_NOT_VERIFIED: "Email address is not verified.",
   EMAIL_ALREADY_VERIFIED: "Email address already verified",

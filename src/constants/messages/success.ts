@@ -16,4 +16,6 @@ export const SUCCESS_MESSAGES = {
   ACCOUNT_DELETED_SUCCESS: "Account deleted successfully.",
   USER_STATUS_UPDATED: "User status updated successfully.",
   USER_ROLE_UPDATED: "User role updated successfully.",
+  SESSION_FETCHED: "Sessions fetched successfully",
+  SESSION_REVOKED: "Session revoked successfully",
 } as const;
