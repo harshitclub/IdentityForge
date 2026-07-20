@@ -44,4 +44,7 @@ export const ERROR_MESSAGES = {
   TOO_MANY_REQUESTS: "Too many requests. Please try again later.",
   INTERNAL_SERVER_ERROR: "Something went wrong. Please try again later.",
   SERVICE_UNAVAILABLE: "Service temporarily unavailable.",
+  USER_ROLE_ALREADY_ASSIGNED: "This role is already assigned to the user.",
+  USER_STATUS_ALREADY_ASSIGNED: "This status is already assigned to the user.",
+  USER_ALREADY_DELETED: "User is already deleted.",
 } as const;

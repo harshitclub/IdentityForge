@@ -1,4 +1,6 @@
 import { env } from "../../config/env.js";
+import { cacheRedis } from "../../config/redis.js";
+import { SUCCESS_MESSAGES } from "../../constants/index.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { checkDependencies, getApplicationInfo } from "./system.service.js";
@@ -74,5 +76,15 @@ export const info = asyncHandler(async (req, res) => {
     res,
     message: "Application information fetched successfully.",
     data: applicationInfo,
+  });
+});
+
+export const resetCache = asyncHandler(async (req, res) => {
+  await cacheRedis.flushall();
+
+  return apiResponse({
+    req,
+    res,
+    message: SUCCESS_MESSAGES.CACHE_RESET,
   });
 });

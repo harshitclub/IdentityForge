@@ -1,16 +1,35 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
+import { prisma } from "../../config/prisma.js";
+import { cacheRedis } from "../../config/redis.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  SUCCESS_MESSAGES,
+} from "../../constants/index.js";
+import { AppError } from "../../shared/utils/appError.js";
+import { adminService } from "./admin.service.js";
 
 /**
  * @desc    Get All Users
  * @route   GET /api/v1/admin/users
  */
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+
+  const { data, cached } = await adminService.getAllUsers({
+    page,
+    limit,
+  });
+
   return apiResponse({
     req,
     res,
-    message: "Users fetched successfully",
+    message: SUCCESS_MESSAGES.USERS_FETCHED,
+    data,
+    cached,
   });
 });
 
@@ -19,10 +38,16 @@ export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
  * @route   GET /api/v1/admin/users/:id
  */
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
+  const { user, cached } = await adminService.getUserById(
+    req.params.id as string,
+  );
+
   return apiResponse({
     req,
     res,
-    message: "User fetched successfully",
+    message: SUCCESS_MESSAGES.USER_FETCHED,
+    data: user,
+    cached,
   });
 });
 
@@ -32,10 +57,16 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
  */
 export const updateUserRole = asyncHandler(
   async (req: Request, res: Response) => {
+    const updatedUser = await adminService.updateUserRole(
+      req.params.id as string,
+      req.body,
+    );
+
     return apiResponse({
       req,
       res,
-      message: "User role updated successfully",
+      message: SUCCESS_MESSAGES.USER_ROLE_UPDATED,
+      data: updatedUser,
     });
   },
 );
@@ -46,10 +77,16 @@ export const updateUserRole = asyncHandler(
  */
 export const updateUserStatus = asyncHandler(
   async (req: Request, res: Response) => {
+    const updatedUser = await adminService.updateUserStatus(
+      req.params.id as string,
+      req.body,
+    );
+
     return apiResponse({
       req,
       res,
-      message: "User status updated successfully",
+      message: SUCCESS_MESSAGES.USER_STATUS_UPDATED,
+      data: updatedUser,
     });
   },
 );
@@ -59,9 +96,11 @@ export const updateUserStatus = asyncHandler(
  * @route   DELETE /api/v1/admin/users/:id
  */
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
+  await adminService.deleteUser(req.params.id as string);
+
   return apiResponse({
     req,
     res,
-    message: "User deleted successfully",
+    message: SUCCESS_MESSAGES.USER_DELETED,
   });
 });

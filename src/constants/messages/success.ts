@@ -16,6 +16,10 @@ export const SUCCESS_MESSAGES = {
   ACCOUNT_DELETED_SUCCESS: "Account deleted successfully.",
   USER_STATUS_UPDATED: "User status updated successfully.",
   USER_ROLE_UPDATED: "User role updated successfully.",
-  SESSION_FETCHED: "Sessions fetched successfully",
-  SESSION_REVOKED: "Session revoked successfully",
+  SESSION_FETCHED: "Sessions fetched successfully.",
+  SESSION_REVOKED: "Session revoked successfully.",
+  USERS_FETCHED: "Users fetched successfully.",
+  USER_FETCHED: "User fetched successfully.",
+  USER_DELETED: "User deleted successfully.",
+  CACHE_RESET: "Redis cache cleared successfully.",
 } as const;

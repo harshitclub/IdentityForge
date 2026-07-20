@@ -21,6 +21,7 @@ import {
   resetPasswordSchema,
 } from "./auth.validator.js";
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
+import { rateLimiter } from "../../shared/middlewares/rateLimiter.js";
 
 const authRoutes = Router();
 
@@ -112,7 +113,7 @@ authRoutes.post("/signup", validate(registerSchema), signup);
  *       500:
  *         description: Internal server error.
  */
-authRoutes.post("/login", validate(loginSchema), login);
+authRoutes.post("/login", rateLimiter, validate(loginSchema), login);
 
 /**
  * @swagger
