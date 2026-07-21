@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
-import { logger } from "../config/logger.js";
 import { transporter } from "../config/mailer.js";
+import { LOG_EVENTS } from "../constants/index.js";
+import { logger } from "../shared/logging/logger.js";
 import { resetPasswordEmailTemplate } from "./templates/reset-password.template.js";
 import { verificationEmailTemplate } from "./templates/verify-email.template.js";
 
@@ -21,7 +22,11 @@ export const sendVerificationEmail = async ({
   verificationUrl,
 }: SendVerificationEmailOptions) => {
   try {
-    logger.info(`Sending verification email to ${email}`);
+    logger.info({
+      event: LOG_EVENTS.EMAIL_SENDING,
+      component: "EmailService",
+      email,
+    });
 
     const html = verificationEmailTemplate(firstName, verificationUrl);
 
@@ -32,16 +37,24 @@ export const sendVerificationEmail = async ({
       html,
     });
 
-    logger.info(
-      `Verification email sent to ${email}. Response: ${info.response}`,
-    );
+    logger.info({
+      event: LOG_EVENTS.EMAIL_SENT,
+      component: "EmailService",
+      email,
+    });
 
     return info;
   } catch (err) {
-    logger.error("Verification email failed", {
+    const error = err instanceof Error ? err : new Error("Unknown error");
+
+    logger.error({
+      event: LOG_EVENTS.EMAIL_SEND_FAILED,
+      component: "EmailService",
       email,
-      firstName,
-      error: err,
+      error: {
+        message: error.message,
+        stack: error.stack,
+      },
     });
 
     throw err;

@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "./env.js";
-import { logger } from "./logger.js";
+import { logger } from "../shared/logging/logger.js";
+import { LOG_EVENTS } from "../constants/index.js";
 
 // SMTP Transport
 export const transporter = nodemailer.createTransport({
@@ -22,5 +23,16 @@ export const transporter = nodemailer.createTransport({
 // Verify SMTP connection
 transporter
   .verify()
-  .then(() => logger.info("SMTP connection verified"))
-  .catch((err) => logger.error("SMTP connection failed", err.message));
+  .then(() => {
+    logger.info({
+      event: LOG_EVENTS.SMTP_READY,
+      component: "EmailService",
+    });
+  })
+  .catch((error) => {
+    logger.error({
+      event: LOG_EVENTS.SMTP_CONNECTION_FAILED,
+      component: "EmailService",
+      error,
+    });
+  });

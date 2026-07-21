@@ -4,7 +4,7 @@ import { AppError } from "../appError.js";
 import type { UserRole } from "../../../generated/prisma/enums.js";
 import { env } from "../../../config/env.js";
 import { ERROR_MESSAGES, HTTP_STATUS } from "../../../constants/index.js";
-import { logger } from "../../../config/logger.js";
+import { logger } from "../../logging/logger.js";
 
 export interface AccessTokenPayload {
   id: string;

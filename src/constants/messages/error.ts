@@ -47,4 +47,4 @@ export const ERROR_MESSAGES = {
   USER_ROLE_ALREADY_ASSIGNED: "This role is already assigned to the user.",
   USER_STATUS_ALREADY_ASSIGNED: "This status is already assigned to the user.",
   USER_ALREADY_DELETED: "User is already deleted.",
-} as const;
+};

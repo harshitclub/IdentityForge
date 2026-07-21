@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../../../config/env.js";
-import { logger } from "../../../config/logger.js";
 import { ERROR_MESSAGES } from "../../../constants/index.js";
+import { logger } from "../../logging/logger.js";
 
 export interface RefreshTokenPayload {
   id: string;

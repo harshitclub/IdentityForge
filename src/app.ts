@@ -5,8 +5,6 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
 
-import { morganMiddleware } from "./config/morgan.js";
-
 import { notFoundHandler } from "./shared/middlewares/notFound.middleware.js";
 import { globalErrorHandler } from "./shared/middlewares/error.middleware.js";
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -15,13 +13,15 @@ import adminRoutes from "./modules/admin/admin.routes.js";
 import { setupSwagger } from "./docs/swagger.js";
 import systemRoutes from "./modules/system/system.routes.js";
 import { env } from "./config/env.js";
+import { requestIdMiddleware } from "./shared/middlewares/request-id.middleware.js";
+import { requestLoggerMiddleware } from "./shared/middlewares/request-logger.middleware.js";
+import { requestContextMiddleware } from "./shared/request-context/request-context.middleware.js";
 
 const app: Application = express();
 
 /**
  * Security & Utility Middlewares
  */
-app.use(morganMiddleware);
 app.use(
   helmet({
     crossOriginResourcePolicy: {
@@ -49,6 +49,12 @@ app.disable("x-powered-by");
 if (env.NODE_ENV !== "production") {
   setupSwagger(app);
 }
+
+app.use(requestIdMiddleware);
+
+app.use(requestContextMiddleware);
+
+app.use(requestLoggerMiddleware);
 
 /**
  * API Routes

@@ -11,4 +11,4 @@ export const LOG_MESSAGES = {
   TOKEN_REFRESHED: "Access token refreshed",
   ACCOUNT_LOCKED: "Account locked due to multiple failed login attempts",
   USER_DELETED: "User soft deleted",
-} as const;
+};

@@ -1,0 +1,30 @@
+1. setting up a monolith structure of the IdentityForge backend
+2. setting up typeScript in it.
+3. setting up a express server.
+4. setting up a global error handler middleware.
+5. setting up a not found handler.
+6. setting up config files like env.ts
+7. setting up routes
+8. setting up controllers
+9. setting up postgresql in neon and connect with my backend.
+10. writed the required schemas using prisma and do the generation and migrations.
+11. writed the business logic of auth
+12. dockerize this backend.
+13. move the neon postgresql to docker and dump the idea of neon postgresql.
+14. writed the business logic of user and admin.
+15. writed the express based rate limiter.
+16. setting up winston and morgan for logging.
+17. tested the api's manually in postman
+18. tested the api's by using postman script also.
+19. added the real smtp mails for sending the emails for verification, forget password, etc.
+20. setting up bullmq indirectly setted the redis in docker for bullmq.
+21. added messaging queue with bullmq for sending email.
+22. added caching using redis in some apis.
+23. convert the monolith backend architecture to modular monolith architecture.
+24. move the business logic of controllers to their respective .service.ts file (ex. auth.service.ts)
+25. setting up swagger for api docs.
+26. added helmet, hpp, and compression dependency.
+27. added a apiResponse function to maintain the consistency of the Response
+28. added zod in the backend for better validations.
+29. added middlewares for authenticate user and one middleware for authenticate admin
+30. improved the winston logging, convert it to produce more structured logs for loki and promtail for grafana dashboard. now we stack request entire lifecycle.

@@ -4,13 +4,19 @@ import {
   sendVerificationEmail,
 } from "../../emails/email.service.js";
 import { env } from "../../config/env.js";
-import { logger } from "../../config/logger.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
+import { logger } from "../../shared/logging/logger.js";
+import { LOG_EVENTS } from "../../constants/index.js";
 
 export const emailWorker = new Worker(
   "email-queue",
   async (job) => {
-    logger.info(`Processing email job ${job.id} (${job.name})`);
+    logger.info({
+      event: LOG_EVENTS.JOB_PROCESSING,
+      component: "EmailWorker",
+      jobId: job.id,
+      jobName: job.name,
+    });
     switch (job.name) {
       case EMAIL_JOBS.VERIFICATION:
         await sendVerificationEmail(job.data);
@@ -32,19 +38,41 @@ export const emailWorker = new Worker(
 );
 
 emailWorker.on("completed", (job) => {
-  logger.info(`Email job ${job.id} (${job.name}) completed`);
+  logger.info({
+    event: LOG_EVENTS.JOB_COMPLETED,
+    component: "EmailWorker",
+    jobId: job.id,
+    jobName: job.name,
+  });
 });
 
 emailWorker.on("failed", (job, err) => {
-  logger.error(`Email job ${job?.id} (${job?.name}) failed: ${err.message}`);
+  logger.error({
+    event: LOG_EVENTS.JOB_FAILED,
+    component: "EmailWorker",
+    jobId: job?.id,
+    jobName: job?.name,
+    error: {
+      message: err.message,
+      stack: err.stack,
+    },
+  });
 });
 
 emailWorker.on("active", (job) => {
-  logger.info(`Email job ${job.id} (${job.name}) started`);
+  logger.info({
+    event: LOG_EVENTS.JOB_STARTED,
+    component: "EmailWorker",
+    jobId: job.id,
+    jobName: job.name,
+  });
 });
 
 process.on("SIGINT", async () => {
-  logger.warn("Shutting down email worker");
+  logger.warn({
+    event: LOG_EVENTS.WORKER_SHUTDOWN,
+    component: "EmailWorker",
+  });
 
   await emailWorker.close();
 

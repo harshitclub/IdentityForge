@@ -1,14 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
-import { prisma } from "../../config/prisma.js";
-import { cacheRedis } from "../../config/redis.js";
-import {
-  ERROR_MESSAGES,
-  HTTP_STATUS,
-  SUCCESS_MESSAGES,
-} from "../../constants/index.js";
-import { AppError } from "../../shared/utils/appError.js";
+import { SUCCESS_MESSAGES } from "../../constants/index.js";
 import { adminService } from "./admin.service.js";
 
 /**

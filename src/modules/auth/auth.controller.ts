@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
 import { AppError } from "../../shared/utils/appError.js";
-import { logger } from "../../config/logger.js";
+import { logger } from "../../shared/logging/logger.js";
 import {
   ERROR_MESSAGES,
   HTTP_STATUS,

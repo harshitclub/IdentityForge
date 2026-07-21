@@ -1,10 +1,10 @@
 import { env } from "../../config/env.js";
-import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { cacheRedis } from "../../config/redis.js";
 import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
 import { emailQueue } from "../../jobs/queues/email.queue.js";
+import { logger } from "../../shared/logging/logger.js";
 import { AppError } from "../../shared/utils/appError.js";
 import { generateAccessToken } from "../../shared/utils/auth/accessToken.js";
 import {
@@ -19,7 +19,6 @@ import { generateResetPasswordTokenRaw } from "../../shared/utils/auth/resetPass
 import { sha256Hex } from "../../shared/utils/auth/sha256Hex.js";
 import { generateVerificationTokenRaw } from "../../shared/utils/auth/verificationToken.js";
 import { maskEmail } from "../../shared/utils/mask.js";
-import { getSessionMetadata } from "../../shared/utils/session.util.js";
 import type {
   ChangePasswordDto,
   ForgotPasswordDto,

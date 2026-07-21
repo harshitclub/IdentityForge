@@ -22,4 +22,4 @@ export const SUCCESS_MESSAGES = {
   USER_FETCHED: "User fetched successfully.",
   USER_DELETED: "User deleted successfully.",
   CACHE_RESET: "Redis cache cleared successfully.",
-} as const;
+};
