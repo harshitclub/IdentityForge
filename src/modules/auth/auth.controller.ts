@@ -2,10 +2,11 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
 import { AppError } from "../../shared/utils/appError.js";
-import { logger } from "../../shared/logging/logger.js";
+import { getRequestLogger } from "../../shared/request-context/request-context.js";
 import {
   ERROR_MESSAGES,
   HTTP_STATUS,
+  LOG_EVENTS,
   SUCCESS_MESSAGES,
 } from "../../constants/index.js";
 import { env } from "../../config/env.js";
@@ -89,11 +90,14 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
+    const logger = getRequestLogger();
     // Read refresh token cookie
     const { if_refreshToken: refreshToken } = req.cookies;
 
     if (!refreshToken) {
-      logger.warn("Refresh token cookie missing.");
+      logger.warn({
+        event: LOG_EVENTS.REFRESH_TOKEN_COOKIE_MISSING,
+      });
 
       throw new AppError(
         ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
@@ -132,8 +136,12 @@ export const refreshToken = asyncHandler(
  */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const token = req.query.token;
+  const logger = getRequestLogger();
 
   if (!token || typeof token !== "string") {
+    logger.warn({
+      event: LOG_EVENTS.INVALID_VERIFY_EMAIL_REQUEST,
+    });
     throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
   }
 
@@ -186,8 +194,12 @@ export const forgotPassword = asyncHandler(
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
     const token = req.query.token;
+    const logger = getRequestLogger();
 
     if (!token || typeof token !== "string") {
+      logger.warn({
+        event: LOG_EVENTS.INVALID_RESET_PASSWORD_REQUEST,
+      });
       throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, HTTP_STATUS.BAD_REQUEST);
     }
 

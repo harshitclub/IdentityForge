@@ -21,7 +21,7 @@ import {
   resetPasswordSchema,
 } from "./auth.validator.js";
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
-import { rateLimiter } from "../../shared/middlewares/rateLimiter.js";
+import { rateLimiter } from "../../shared/middlewares/redisRateLimiter.js";
 
 const authRoutes = Router();
 

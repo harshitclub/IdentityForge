@@ -3,6 +3,7 @@ import {
   health,
   info,
   live,
+  metrics,
   ready,
   resetCache,
   version,
@@ -103,6 +104,7 @@ systemRoutes.get("/info", info);
  *         description: Redis cache cleared successfully.
  */
 systemRoutes.post("/cache/reset", resetCache);
-// systemRoutes.get("/metrics");
+
+systemRoutes.get("/metrics", metrics);
 
 export default systemRoutes;

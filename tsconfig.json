@@ -42,6 +42,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "exclude": ["node_modules", "prisma.config.ts", "generated"]
+  "exclude": ["node_modules", "prisma.config.ts", "generated", "dist"]
   
 }

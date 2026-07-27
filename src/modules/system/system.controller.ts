@@ -1,11 +1,13 @@
+import type { Request, Response } from "express";
 import { env } from "../../config/env.js";
 import { cacheRedis } from "../../config/redis.js";
 import { SUCCESS_MESSAGES } from "../../constants/index.js";
 import { apiResponse } from "../../shared/utils/apiResponse.js";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { checkDependencies, getApplicationInfo } from "./system.service.js";
+import { register } from "../../metrics/prometheus.js";
 
-export const health = asyncHandler(async (req, res) => {
+export const health = asyncHandler(async (req: Request, res: Response) => {
   const { database, redis } = await checkDependencies();
   const healthy = database && redis;
 
@@ -24,7 +26,7 @@ export const health = asyncHandler(async (req, res) => {
   });
 });
 
-export const ready = asyncHandler(async (req, res) => {
+export const ready = asyncHandler(async (req: Request, res: Response) => {
   const { database, redis } = await checkDependencies();
 
   const ready = database && redis;
@@ -44,7 +46,7 @@ export const ready = asyncHandler(async (req, res) => {
   });
 });
 
-export const live = asyncHandler(async (req, res) => {
+export const live = asyncHandler(async (req: Request, res: Response) => {
   return apiResponse({
     req,
     res,
@@ -56,7 +58,7 @@ export const live = asyncHandler(async (req, res) => {
   });
 });
 
-export const version = asyncHandler(async (req, res) => {
+export const version = asyncHandler(async (req: Request, res: Response) => {
   return apiResponse({
     req,
     res,
@@ -68,7 +70,7 @@ export const version = asyncHandler(async (req, res) => {
   });
 });
 
-export const info = asyncHandler(async (req, res) => {
+export const info = asyncHandler(async (req: Request, res: Response) => {
   const applicationInfo = getApplicationInfo();
 
   return apiResponse({
@@ -79,7 +81,7 @@ export const info = asyncHandler(async (req, res) => {
   });
 });
 
-export const resetCache = asyncHandler(async (req, res) => {
+export const resetCache = asyncHandler(async (req: Request, res: Response) => {
   await cacheRedis.flushall();
 
   return apiResponse({
@@ -87,4 +89,10 @@ export const resetCache = asyncHandler(async (req, res) => {
     res,
     message: SUCCESS_MESSAGES.CACHE_RESET,
   });
+});
+
+export const metrics = asyncHandler(async (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", register.contentType);
+
+  res.end(await register.metrics());
 });

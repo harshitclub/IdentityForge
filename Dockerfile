@@ -23,6 +23,9 @@ RUN npm install
 # =========================================
 COPY . .
 
+ARG DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV DATABASE_URL=$DATABASE_URL
+
 # =========================================
 # Build TypeScript
 # =========================================
@@ -36,4 +39,4 @@ EXPOSE 5000
 # =========================================
 # Start App
 # =========================================
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]

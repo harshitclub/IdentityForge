@@ -4,7 +4,7 @@ services:
   backend:
     build: .
 
-    container_name: if
+    container_name: if_backend
 
     ports:
       - "5000:5000"
@@ -12,32 +12,78 @@ services:
     env_file:
       - .env
 
+    depends_on:
+      - db
+      - redis
+
     restart: unless-stopped
-  
+
   db:
     image: postgres:17-alpine
+
     container_name: if_postgres
-    restart: unless-stopped
+
     ports:
       - "5432:5432"
+
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: rootpassword
       POSTGRES_DB: identityforge
+
     volumes:
-      # This is the "safe" part: it persists your data on your host machine
-      # so if the container dies, your data survives.
       - pgdata:/var/lib/postgresql/data
+
+    restart: unless-stopped
+
   redis:
     image: redis:8-alpine
+
     container_name: if_redis
-    restart: unless-stopped
+
     ports:
       - "6379:6379"
+
+    command: redis-server --appendonly yes
+
     volumes:
       - redisdata:/data
-    command: redis-server --appendonly yes
+
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+
+    container_name: if_prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+
+    container_name: if_grafana
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+    depends_on:
+      - prometheus
+
+    restart: unless-stopped
 
 volumes:
   pgdata:
   redisdata:
+  grafana-data:

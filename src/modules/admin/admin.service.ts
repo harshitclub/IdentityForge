@@ -1,6 +1,11 @@
 import { prisma } from "../../config/prisma.js";
 import { cacheRedis } from "../../config/redis.js";
-import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../constants/index.js";
+import { getRequestLogger } from "../../shared/request-context/request-context.js";
 import { AppError } from "../../shared/utils/appError.js";
 import type {
   PaginationDto,
@@ -10,7 +15,15 @@ import type {
 
 class AdminService {
   async getAllUsers(data: PaginationDto) {
+    const logger = getRequestLogger();
+
     const { page, limit } = data;
+
+    logger.info({
+      event: LOG_EVENTS.ADMIN_USERS_FETCH_STARTED,
+      page,
+      limit,
+    });
 
     const skip = (page - 1) * limit;
 
@@ -19,6 +32,10 @@ class AdminService {
     const cachedUsers = await cacheRedis.get(cacheKey);
 
     if (cachedUsers) {
+      logger.info({
+        event: LOG_EVENTS.CACHE_HIT,
+        cacheKey,
+      });
       return {
         data: JSON.parse(cachedUsers),
         cached: true,
@@ -60,8 +77,18 @@ class AdminService {
       },
     };
 
-    await cacheRedis.set(cacheKey, JSON.stringify(response), "EX", 60 * 5);
+    logger.info({
+      event: LOG_EVENTS.CACHE_MISS,
+      cacheKey,
+    });
 
+    await cacheRedis.set(cacheKey, JSON.stringify(response), "EX", 60 * 5);
+    logger.info({
+      event: LOG_EVENTS.ADMIN_USERS_FETCH_COMPLETED,
+      page,
+      limit,
+      totalUsers,
+    });
     return {
       data: response,
       cached: false,
@@ -69,11 +96,16 @@ class AdminService {
   }
 
   async getUserById(userId: string) {
+    const logger = getRequestLogger();
     const cacheKey = `admin:user:${userId}`;
 
     const cachedUser = await cacheRedis.get(cacheKey);
 
     if (cachedUser) {
+      logger.info({
+        event: LOG_EVENTS.CACHE_HIT,
+        cacheKey,
+      });
       return {
         user: JSON.parse(cachedUser),
         cached: true,
@@ -98,11 +130,21 @@ class AdminService {
     });
 
     if (!user) {
+      logger.warn({
+        event: LOG_EVENTS.USER_NOT_FOUND,
+        userId,
+      });
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
-
+    logger.info({
+      event: LOG_EVENTS.CACHE_MISS,
+      cacheKey,
+    });
     await cacheRedis.set(cacheKey, JSON.stringify(user), "EX", 60 * 5);
-
+    logger.info({
+      event: LOG_EVENTS.ADMIN_USER_FETCHED,
+      userId,
+    });
     return {
       user,
       cached: false,
@@ -110,7 +152,15 @@ class AdminService {
   }
 
   async updateUserRole(userId: string, data: UpdateUserRoleDto) {
+    const logger = getRequestLogger();
+
     const { role } = data;
+
+    logger.info({
+      event: LOG_EVENTS.USER_ROLE_UPDATE_STARTED,
+      targetUserId: userId,
+      newRole: role,
+    });
 
     const user = await prisma.user.findUnique({
       where: {
@@ -123,10 +173,19 @@ class AdminService {
     });
 
     if (!user) {
+      logger.warn({
+        event: LOG_EVENTS.USER_NOT_FOUND,
+        targetUserId: userId,
+      });
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
     if (user.role === role) {
+      logger.warn({
+        event: LOG_EVENTS.USER_ROLE_ALREADY_ASSIGNED,
+        targetUserId: userId,
+        role,
+      });
       throw new AppError(
         ERROR_MESSAGES.USER_ROLE_ALREADY_ASSIGNED,
         HTTP_STATUS.BAD_REQUEST,
@@ -152,6 +211,11 @@ class AdminService {
       },
     });
 
+    logger.info({
+      event: LOG_EVENTS.USER_ROLE_UPDATED,
+      targetUserId: userId,
+      role,
+    });
     await cacheRedis.del(`admin:user:${userId}`);
 
     const keys = await cacheRedis.keys("admin:users:*");
@@ -164,7 +228,13 @@ class AdminService {
   }
 
   async updateUserStatus(userId: string, data: UpdateUserStatusDto) {
+    const logger = getRequestLogger();
     const { status } = data;
+    logger.info({
+      event: LOG_EVENTS.USER_STATUS_UPDATE_STARTED,
+      targetUserId: userId,
+      newStatus: status,
+    });
 
     const user = await prisma.user.findUnique({
       where: {
@@ -177,10 +247,19 @@ class AdminService {
     });
 
     if (!user) {
+      logger.warn({
+        event: LOG_EVENTS.USER_NOT_FOUND,
+        targetUserId: userId,
+      });
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
     if (user.status === status) {
+      logger.warn({
+        event: LOG_EVENTS.USER_STATUS_ALREADY_ASSIGNED,
+        targetUserId: userId,
+        status,
+      });
       throw new AppError(
         ERROR_MESSAGES.USER_STATUS_ALREADY_ASSIGNED,
         HTTP_STATUS.BAD_REQUEST,
@@ -206,6 +285,11 @@ class AdminService {
       },
     });
 
+    logger.info({
+      event: LOG_EVENTS.USER_STATUS_UPDATED,
+      targetUserId: userId,
+      status,
+    });
     await cacheRedis.del(`admin:user:${userId}`);
 
     const keys = await cacheRedis.keys("admin:users:*");
@@ -218,6 +302,11 @@ class AdminService {
   }
 
   async deleteUser(userId: string) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.USER_DELETION_STARTED,
+      targetUserId: userId,
+    });
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -229,10 +318,18 @@ class AdminService {
     });
 
     if (!user) {
+      logger.warn({
+        event: LOG_EVENTS.USER_NOT_FOUND,
+        targetUserId: userId,
+      });
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
     if (user.status === "DELETED") {
+      logger.warn({
+        event: LOG_EVENTS.USER_ALREADY_DELETED,
+        targetUserId: userId,
+      });
       throw new AppError(
         ERROR_MESSAGES.USER_ALREADY_DELETED,
         HTTP_STATUS.BAD_REQUEST,
@@ -248,6 +345,10 @@ class AdminService {
       },
     });
 
+    logger.info({
+      event: LOG_EVENTS.USER_DELETED,
+      targetUserId: userId,
+    });
     await cacheRedis.del(`admin:user:${userId}`);
 
     const keys = await cacheRedis.keys("admin:users:*");

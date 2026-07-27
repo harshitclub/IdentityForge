@@ -1,10 +1,14 @@
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { cacheRedis } from "../../config/redis.js";
-import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../constants/index.js";
 import { EMAIL_JOBS } from "../../constants/jobs/jobs.js";
 import { emailQueue } from "../../jobs/queues/email.queue.js";
-import { logger } from "../../shared/logging/logger.js";
+import { getRequestLogger } from "../../shared/request-context/request-context.js";
 import { AppError } from "../../shared/utils/appError.js";
 import { generateAccessToken } from "../../shared/utils/auth/accessToken.js";
 import {
@@ -30,17 +34,24 @@ import type {
 
 class AuthService {
   async signup(data: SignupDto) {
-    const { firstName, lastName, email, password } = data;
+    const logger = getRequestLogger();
 
+    const { firstName, lastName, email, password } = data;
+    logger.info({
+      event: LOG_EVENTS.SIGNUP_STARTED,
+      email: maskEmail(email),
+    });
     const existingUser = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
 
     if (existingUser) {
-      logger.warn(
-        `Signup blocked: Email already exists | email=${maskEmail(email)}`,
-      );
+      logger.warn({
+        event: LOG_EVENTS.SIGNUP_BLOCKED,
+        reason: "USER_ALREADY_EXISTS",
+        email: maskEmail(email),
+      });
       throw new AppError(
         ERROR_MESSAGES.USER_ALREADY_EXISTS,
         HTTP_STATUS.CONFLICT,
@@ -71,6 +82,11 @@ class AuthService {
       return createdUser;
     });
 
+    logger.info({
+      event: LOG_EVENTS.USER_REGISTERED,
+      userId: user.id,
+    });
+
     const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
     await emailQueue.add(EMAIL_JOBS.VERIFICATION, {
@@ -79,11 +95,24 @@ class AuthService {
       verificationUrl,
     });
 
-    logger.info(`Verification email job queued for ${user.email}`);
+    logger.info({
+      event: LOG_EVENTS.EMAIL_VERIFICATION_QUEUED,
+      userId: user.id,
+    });
+
+    logger.info({
+      event: LOG_EVENTS.SIGNUP_COMPLETED,
+      userId: user.id,
+    });
   }
 
   async login(data: LoginDto, sessionMetadata: SessionMetadata) {
+    const logger = getRequestLogger();
     const { email, password } = data;
+    logger.info({
+      event: LOG_EVENTS.LOGIN_STARTED,
+      email: maskEmail(email),
+    });
     const now = new Date();
 
     const user = await prisma.user.findUnique({
@@ -113,14 +142,22 @@ class AuthService {
 
     // Account has been deleted
     if (user.status === "DELETED") {
-      logger.warn(`Login blocked: Deleted account | userId=${user.id}`);
+      logger.warn({
+        event: LOG_EVENTS.ACCOUNT_DELETED,
+        reason: "ACCOUNT_DELETED",
+        userId: user.id,
+      });
 
       throw new AppError(ERROR_MESSAGES.ACCOUNT_DELETED, HTTP_STATUS.FORBIDDEN);
     }
 
     // Account is currently locked
     if (user.lockUntil && user.lockUntil > now) {
-      logger.warn(`Login blocked: Account locked | userId=${user.id}`);
+      logger.warn({
+        event: LOG_EVENTS.ACCOUNT_LOCKED,
+        reason: "ACCOUNT_LOCKED",
+        userId: user.id,
+      });
 
       throw new AppError(ERROR_MESSAGES.ACCOUNT_LOCKED, HTTP_STATUS.FORBIDDEN);
     }
@@ -141,6 +178,12 @@ class AuthService {
         },
       });
 
+      logger.warn({
+        event: LOG_EVENTS.USER_LOGIN_FAILED,
+        reason: "INVALID_PASSWORD",
+        userId: user.id,
+      });
+
       if (updatedUser.failedLoginAttempts >= env.MAX_FAILED_LOGIN) {
         const lockUntil = new Date(
           Date.now() + env.ACCOUNT_LOCK_DURATION * 60 * 1000,
@@ -153,7 +196,10 @@ class AuthService {
           },
         });
 
-        logger.warn(`Account locked | userId=${user.id}`);
+        logger.warn({
+          event: LOG_EVENTS.ACCOUNT_LOCKED,
+          userId: user.id,
+        });
 
         throw new AppError(
           ERROR_MESSAGES.ACCOUNT_LOCKED,
@@ -214,6 +260,11 @@ class AuthService {
       });
     });
 
+    logger.info({
+      event: LOG_EVENTS.USER_LOGIN_SUCCESS,
+      userId: user.id,
+    });
+
     return {
       accessToken,
       refreshToken,
@@ -229,6 +280,7 @@ class AuthService {
   }
 
   async logout(refreshToken?: string) {
+    const logger = getRequestLogger();
     // No refresh token? Logout is still successful.
     if (!refreshToken) {
       return;
@@ -256,7 +308,10 @@ class AuthService {
       // Invalidate cached profile
       await cacheRedis.del(`user:${payload.id}`);
 
-      logger.info(`User logged out | userId=${payload.id}`);
+      logger.info({
+        event: LOG_EVENTS.LOGOUT_SUCCESS,
+        userId: payload.id,
+      });
     } catch {
       // Ignore invalid/expired refresh tokens.
       // Logout should always succeed from the client's perspective.
@@ -264,6 +319,10 @@ class AuthService {
   }
 
   async refreshToken(refreshToken: string) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.TOKEN_REFRESH_STARTED,
+    });
     const tokenPayload = verifyRefreshToken(refreshToken);
 
     const refreshJtiHash = sha256Hex(tokenPayload.jti!);
@@ -281,7 +340,10 @@ class AuthService {
     });
 
     if (!storedRefreshToken) {
-      logger.warn(`Refresh token revoked | userId=${tokenPayload.id}`);
+      logger.warn({
+        event: LOG_EVENTS.REFRESH_TOKEN_REVOKED,
+        userId: tokenPayload.id,
+      });
 
       throw new AppError(
         ERROR_MESSAGES.REFRESH_TOKEN_INVALID,
@@ -350,7 +412,10 @@ class AuthService {
         },
       });
     });
-
+    logger.info({
+      event: LOG_EVENTS.REFRESH_TOKEN_GENERATED,
+      userId: user.id,
+    });
     return {
       accessToken,
       refreshToken: newRefreshToken,
@@ -358,6 +423,10 @@ class AuthService {
   }
 
   async verifyEmail(token: string) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.EMAIL_VERIFICATION_STARTED,
+    });
     const tokenHash = sha256Hex(token);
 
     const verificationToken = await prisma.emailVerificationToken.findUnique({
@@ -407,12 +476,14 @@ class AuthService {
       });
     });
 
-    logger.info(
-      `Email verified successfully | userId=${verificationToken.user.id}`,
-    );
+    logger.info({
+      event: LOG_EVENTS.EMAIL_VERIFIED,
+      userId: verificationToken.user.id,
+    });
   }
 
   async resendVerification(userId: string) {
+    const logger = getRequestLogger();
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -464,14 +535,19 @@ class AuthService {
       verificationUrl,
     });
 
-    logger.info(
-      `Verification email re-queued | userId=${user.id} | email=${user.email}`,
-    );
+    logger.info({
+      event: LOG_EVENTS.EMAIL_VERIFICATION_QUEUED,
+      userId: user.id,
+    });
   }
 
   async forgotPassword(data: ForgotPasswordDto) {
+    const logger = getRequestLogger();
     const { email } = data;
-
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_RESET_REQUESTED,
+      email: maskEmail(email),
+    });
     const user = await prisma.user.findUnique({
       where: {
         email,
@@ -516,10 +592,17 @@ class AuthService {
       resetPasswordUrl,
     });
 
-    logger.info(`Password reset email queued for user ${user.id}`);
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_RESET_EMAIL_QUEUED,
+      userId: user.id,
+    });
   }
 
   async resetPassword(token: string, data: ResetPasswordDto) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_RESET_STARTED,
+    });
     const { newPassword } = data;
 
     const tokenHash = sha256Hex(token);
@@ -596,12 +679,18 @@ class AuthService {
 
     await cacheRedis.del(`user:${passwordResetToken.user.id}`);
 
-    logger.info(
-      `Password reset successfully | userId=${passwordResetToken.user.id}`,
-    );
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_RESET_COMPLETED,
+      userId: passwordResetToken.user.id,
+    });
   }
 
   async changePassword(userId: string, data: ChangePasswordDto) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_CHANGE_STARTED,
+      userId,
+    });
     const { currentPassword, newPassword } = data;
 
     const user = await prisma.user.findUnique({
@@ -666,15 +755,25 @@ class AuthService {
 
     // Invalidate cached profile
     await cacheRedis.del(`user:${user.id}`);
+
+    logger.info({
+      event: LOG_EVENTS.PASSWORD_CHANGED,
+      userId,
+    });
   }
 
   async getMe(userId: string) {
+    const logger = getRequestLogger();
     const cacheKey = `user:${userId}`;
 
     // Check cache
     const cachedUser = await cacheRedis.get(cacheKey);
 
     if (cachedUser) {
+      logger.info({
+        event: LOG_EVENTS.CACHE_HIT,
+        cacheKey,
+      });
       return {
         user: JSON.parse(cachedUser),
         cached: true,
@@ -706,7 +805,10 @@ class AuthService {
 
     // Cache for 5 minutes
     await cacheRedis.set(cacheKey, JSON.stringify(user), "EX", 60 * 5);
-
+    logger.info({
+      event: LOG_EVENTS.CACHE_MISS,
+      cacheKey,
+    });
     return {
       user,
       cached: false,
@@ -714,6 +816,7 @@ class AuthService {
   }
 
   async revokeAllSessions(userId: string) {
+    const logger = getRequestLogger();
     await prisma.$transaction(async (tx) => {
       await tx.refreshToken.deleteMany({
         where: {
@@ -731,7 +834,10 @@ class AuthService {
     // Invalidate cached profile
     await cacheRedis.del(`user:${userId}`);
 
-    logger.info(`All sessions revoked | userId=${userId}`);
+    logger.info({
+      event: LOG_EVENTS.ALL_SESSIONS_REVOKED,
+      userId,
+    });
   }
 }
 

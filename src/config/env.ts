@@ -31,6 +31,9 @@ const envSchema = z.object({
 
   MAX_FAILED_LOGIN: z.coerce.number(),
   ACCOUNT_LOCK_DURATION: z.coerce.number(),
+
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number(),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

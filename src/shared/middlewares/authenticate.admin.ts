@@ -1,7 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/appError.js";
 import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
-import { verifyAccessToken } from "../utils/auth/accessToken.js";
 import { prisma } from "../../config/prisma.js";
 
 export async function authenticateAdmin(

@@ -1,14 +1,23 @@
 import { prisma } from "../../config/prisma.js";
 import { cacheRedis } from "../../config/redis.js";
-import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../constants/index.js";
 import type { Prisma } from "../../generated/prisma/client.js";
+import { getRequestLogger } from "../../shared/request-context/request-context.js";
 import { AppError } from "../../shared/utils/appError.js";
 import type { UpdateProfileDto } from "./user.types.js";
 
 class UserService {
   async updateProfile(userId: string, data: UpdateProfileDto) {
+    const logger = getRequestLogger();
     const { firstName, lastName, username } = data;
-
+    logger.info({
+      event: LOG_EVENTS.PROFILE_UPDATE_STARTED,
+      userId,
+    });
     const updateData: Prisma.UserUpdateInput = {};
 
     if (firstName !== undefined) updateData.firstName = firstName;
@@ -26,6 +35,12 @@ class UserService {
       });
 
       if (existingUser) {
+        logger.warn({
+          event: LOG_EVENTS.PROFILE_UPDATE_BLOCKED,
+          reason: "USERNAME_ALREADY_TAKEN",
+          userId,
+          username,
+        });
         throw new AppError(
           ERROR_MESSAGES.USERNAME_ALREADY_TAKEN,
           HTTP_STATUS.CONFLICT,
@@ -53,11 +68,19 @@ class UserService {
     });
 
     await cacheRedis.del(`user:${userId}`);
-
+    logger.info({
+      event: LOG_EVENTS.PROFILE_UPDATED,
+      userId,
+    });
     return updatedUser;
   }
 
   async deleteAccount(userId: string) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.ACCOUNT_DELETION_STARTED,
+      userId,
+    });
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -73,6 +96,10 @@ class UserService {
     }
 
     if (user.deletedAt) {
+      logger.warn({
+        event: LOG_EVENTS.ACCOUNT_ALREADY_DELETED,
+        userId,
+      });
       throw new AppError(
         ERROR_MESSAGES.ACCOUNT_ALREADY_DELETED,
         HTTP_STATUS.BAD_REQUEST,
@@ -102,12 +129,20 @@ class UserService {
         },
       });
     });
-
+    logger.info({
+      event: LOG_EVENTS.ACCOUNT_SOFT_DELETED,
+      userId,
+    });
     await cacheRedis.del(`user:${user.id}`);
   }
 
   async getSessions(userId: string) {
-    return prisma.session.findMany({
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.SESSION_FETCH_STARTED,
+      userId,
+    });
+    const sessions = await prisma.session.findMany({
       where: {
         userId,
         expiresAt: {
@@ -131,9 +166,23 @@ class UserService {
         lastUsedAt: "desc",
       },
     });
+
+    logger.info({
+      event: LOG_EVENTS.SESSION_FETCH_COMPLETED,
+      userId,
+      totalSessions: sessions.length,
+    });
+
+    return sessions;
   }
 
   async revokeSession(userId: string, sessionId: string) {
+    const logger = getRequestLogger();
+    logger.info({
+      event: LOG_EVENTS.SESSION_REVOKE_STARTED,
+      userId,
+      sessionId,
+    });
     const session = await prisma.session.findUnique({
       where: {
         id: sessionId,
@@ -146,6 +195,10 @@ class UserService {
     });
 
     if (!session) {
+      logger.warn({
+        event: LOG_EVENTS.SESSION_NOT_FOUND,
+        sessionId,
+      });
       throw new AppError(
         ERROR_MESSAGES.SESSION_NOT_FOUND,
         HTTP_STATUS.NOT_FOUND,
@@ -153,10 +206,20 @@ class UserService {
     }
 
     if (session.userId !== userId) {
+      logger.warn({
+        event: LOG_EVENTS.SESSION_REVOKE_FORBIDDEN,
+        userId,
+        sessionId,
+      });
       throw new AppError(ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
     }
 
     if (session.isCurrent) {
+      logger.warn({
+        event: LOG_EVENTS.CURRENT_SESSION_REVOKE_BLOCKED,
+        userId,
+        sessionId,
+      });
       throw new AppError(
         ERROR_MESSAGES.CURRENT_SESSION_CANNOT_BE_REVOKED,
         HTTP_STATUS.BAD_REQUEST,
@@ -167,6 +230,12 @@ class UserService {
       where: {
         id: session.id,
       },
+    });
+
+    logger.info({
+      event: LOG_EVENTS.SESSION_REVOKED,
+      userId,
+      sessionId,
     });
   }
 }
