@@ -44,10 +44,9 @@ export const globalErrorHandler = (
       },
     });
   } else if (err instanceof ZodError) {
-
-  /**
-   * Zod Validation Error
-   */
+    /**
+     * Zod Validation Error
+     */
     statusCode = HTTP_STATUS.BAD_REQUEST;
     message = "Validation Failed";
 
@@ -64,30 +63,10 @@ export const globalErrorHandler = (
       statusCode,
       validationErrors: errors,
     });
-  } else if (err instanceof jwt.JsonWebTokenError) {
-
-  /**
-   * JWT Invalid Error
-   */
-    statusCode = HTTP_STATUS.UNAUTHORIZED;
-    message = ERROR_MESSAGES.INVALID_TOKEN;
-
-    logger.warn({
-      event: LOG_EVENTS.INVALID_TOKEN,
-      component: "GlobalErrorHandler",
-      method: req.method,
-      path: req.originalUrl,
-      statusCode,
-      error: {
-        name: err.name,
-        message: err.message,
-      },
-    });
   } else if (err instanceof jwt.TokenExpiredError) {
-
-  /**
-   * JWT Expired Error
-   */
+    /**
+     * JWT Expired Error
+     */
     statusCode = HTTP_STATUS.UNAUTHORIZED;
     message = ERROR_MESSAGES.TOKEN_EXPIRED;
 
@@ -102,11 +81,28 @@ export const globalErrorHandler = (
         message: err.message,
       },
     });
-  } else {
+  } else if (err instanceof jwt.JsonWebTokenError) {
+    /**
+     * JWT Invalid Error
+     */
+    statusCode = HTTP_STATUS.UNAUTHORIZED;
+    message = ERROR_MESSAGES.INVALID_TOKEN;
 
-  /**
-   * Unknown Errors
-   */
+    logger.warn({
+      event: LOG_EVENTS.INVALID_TOKEN,
+      component: "GlobalErrorHandler",
+      method: req.method,
+      path: req.originalUrl,
+      statusCode,
+      error: {
+        name: err.name,
+        message: err.message,
+      },
+    });
+  } else {
+    /**
+     * Unknown Errors
+     */
     const unknownError =
       err instanceof Error
         ? err

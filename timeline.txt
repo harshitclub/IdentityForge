@@ -33,3 +33,5 @@
 33. implemented prometheus in the project hosted inside the docker.
 34. added grafana in the project and run it via docker.
 35. improved the logging according to our structured logs setup in winston.
+36. configure the vitest for testing my backend
+37. included unit testing test cases in the test folder

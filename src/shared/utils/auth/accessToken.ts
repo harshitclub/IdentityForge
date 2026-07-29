@@ -3,8 +3,12 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 import { AppError } from "../appError.js";
 import type { UserRole } from "../../../generated/prisma/enums.js";
 import { env } from "../../../config/env.js";
-import { ERROR_MESSAGES, HTTP_STATUS } from "../../../constants/index.js";
-import { logger } from "../../logging/logger.js";
+import {
+  ERROR_MESSAGES,
+  HTTP_STATUS,
+  LOG_EVENTS,
+} from "../../../constants/index.js";
+import { getRequestLogger } from "../../request-context/request-context.js";
 
 export interface AccessTokenPayload {
   id: string;
@@ -26,7 +30,10 @@ export const verifyAccessToken = (
       AccessTokenPayload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      logger.warn(ERROR_MESSAGES.ACCESS_TOKEN_EXPIRED);
+      const logger = getRequestLogger();
+      logger.warn({
+        event: LOG_EVENTS.ACCESS_TOKEN_EXPIRED,
+      });
 
       throw new AppError(
         ERROR_MESSAGES.ACCESS_TOKEN_EXPIRED,
@@ -38,15 +45,21 @@ export const verifyAccessToken = (
       error instanceof jwt.JsonWebTokenError ||
       error instanceof jwt.NotBeforeError
     ) {
-      logger.warn(ERROR_MESSAGES.ACCESS_TOKEN_INVALID);
+      const logger = getRequestLogger();
+      logger.warn({
+        event: LOG_EVENTS.ACCESS_TOKEN_INVALID,
+      });
 
       throw new AppError(
         ERROR_MESSAGES.ACCESS_TOKEN_INVALID,
         HTTP_STATUS.UNAUTHORIZED,
       );
     }
-
-    logger.error(ERROR_MESSAGES.UNAUTHORIZED);
+    const logger = getRequestLogger();
+    logger.error({
+      event: LOG_EVENTS.UNAUTHORIZED_ACCESS,
+      error,
+    });
     throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
   }
 };
