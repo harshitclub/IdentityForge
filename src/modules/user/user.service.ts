@@ -10,20 +10,43 @@ import { getRequestLogger } from "../../shared/request-context/request-context.j
 import { AppError } from "../../shared/utils/appError.js";
 import type { UpdateProfileDto } from "./user.types.js";
 
+/**
+ * ============================================================================
+ * UserService
+ * ============================================================================
+ * Business logic for user self-service operations including profile edits,
+ * unique username verification, self-account deletion, active device session
+ * discovery, and selective session revocation.
+ */
 class UserService {
+  /**
+   * --------------------------------------------------------------------------
+   * 1. Update Profile Flow
+   * --------------------------------------------------------------------------
+   * Updates user first name, last name, or username.
+   * If a username is provided, verifies uniqueness across other users.
+   * Invalidates Redis user profile cache on completion.
+   *
+   * @param userId - ID of authenticated user
+   * @param data - Update profile payload (firstName, lastName, username)
+   * @returns Updated user profile data
+   */
   async updateProfile(userId: string, data: UpdateProfileDto) {
     const logger = getRequestLogger();
     const { firstName, lastName, username } = data;
+
     logger.info({
       event: LOG_EVENTS.PROFILE_UPDATE_STARTED,
       userId,
     });
+
     const updateData: Prisma.UserUpdateInput = {};
 
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
     if (username !== undefined) updateData.username = username;
 
+    // Step 1: Check username uniqueness if modified
     if (username) {
       const existingUser = await prisma.user.findFirst({
         where: {
@@ -48,6 +71,7 @@ class UserService {
       }
     }
 
+    // Step 2: Update user record in database
     const updatedUser = await prisma.user.update({
       where: {
         id: userId,
@@ -67,20 +91,34 @@ class UserService {
       },
     });
 
+    // Step 3: Invalidate user profile cache in Redis
     await cacheRedis.del(`user:${userId}`);
+
     logger.info({
       event: LOG_EVENTS.PROFILE_UPDATED,
       userId,
     });
+
     return updatedUser;
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 2. Self Account Deletion Flow
+   * --------------------------------------------------------------------------
+   * Soft-deletes user account (sets status: DELETED, deletedAt: now),
+   * purges all active RefreshTokens and Sessions, and removes Redis cache.
+   *
+   * @param userId - ID of authenticated user
+   */
   async deleteAccount(userId: string) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.ACCOUNT_DELETION_STARTED,
       userId,
     });
+
+    // Step 1: Verify user exists and is not already deleted
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -106,6 +144,7 @@ class UserService {
       );
     }
 
+    // Step 2: Atomically soft-delete user and delete all active sessions/tokens
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: {
@@ -129,19 +168,32 @@ class UserService {
         },
       });
     });
+
     logger.info({
       event: LOG_EVENTS.ACCOUNT_SOFT_DELETED,
       userId,
     });
+
+    // Step 3: Invalidate cached profile in Redis
     await cacheRedis.del(`user:${user.id}`);
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 3. Get Active Sessions Flow
+   * --------------------------------------------------------------------------
+   * Queries all active, unexpired sessions for user sorted by last used timestamp.
+   *
+   * @param userId - ID of authenticated user
+   * @returns Array of active device session objects
+   */
   async getSessions(userId: string) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.SESSION_FETCH_STARTED,
       userId,
     });
+
     const sessions = await prisma.session.findMany({
       where: {
         userId,
@@ -176,6 +228,16 @@ class UserService {
     return sessions;
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 4. Revoke Session Flow
+   * --------------------------------------------------------------------------
+   * Revokes a specific active session. Validates session existence, ownership,
+   * and prevents revoking the current active session (logout endpoint should be used instead).
+   *
+   * @param userId - ID of authenticated user
+   * @param sessionId - ID of session to revoke
+   */
   async revokeSession(userId: string, sessionId: string) {
     const logger = getRequestLogger();
     logger.info({
@@ -183,6 +245,8 @@ class UserService {
       userId,
       sessionId,
     });
+
+    // Step 1: Verify session exists and belongs to user
     const session = await prisma.session.findUnique({
       where: {
         id: sessionId,
@@ -214,6 +278,7 @@ class UserService {
       throw new AppError(ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
     }
 
+    // Step 2: Prevent revoking current active session via this endpoint
     if (session.isCurrent) {
       logger.warn({
         event: LOG_EVENTS.CURRENT_SESSION_REVOKE_BLOCKED,
@@ -226,6 +291,7 @@ class UserService {
       );
     }
 
+    // Step 3: Delete session record
     await prisma.session.delete({
       where: {
         id: session.id,

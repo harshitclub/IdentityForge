@@ -113,13 +113,6 @@ vi.mock("../../../src/shared/utils/auth/resetPasswordToken.js", () => ({
   generateResetPasswordTokenRaw: vi.fn(),
 }));
 
-const signupData = {
-  firstName: "Harshit",
-  lastName: "Kumar",
-  email: "harshit@example.com",
-  password: "Password@123",
-};
-
 const tx = {
   user: {
     create: vi.fn(),
@@ -147,17 +140,30 @@ const tx = {
   },
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-
-  vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) =>
-    callback(tx),
-  );
-});
+const signupData = {
+  firstName: "Harshit",
+  lastName: "Kumar",
+  email: "harshit@example.com",
+  password: "Password@123",
+};
 
 const loginData = {
   email: "harshit@example.com",
   password: "Password@123",
+};
+
+const userData = {
+  id: "1",
+  email: loginData.email,
+  firstName: "Harshit",
+  lastName: "Kumar",
+  username: null,
+  role: "USER",
+  password: "hashed-password",
+  failedLoginAttempts: 0,
+  lockUntil: null,
+  deletedAt: null,
+  status: "ACTIVE",
 };
 
 const sessionMetadata = {
@@ -168,19 +174,17 @@ const sessionMetadata = {
   device: "",
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) =>
+    callback(tx),
+  );
+});
+
 const setupSuccessfulLogin = () => {
   vi.mocked(prisma.user.findUnique).mockResolvedValue({
-    id: "1",
-    email: loginData.email,
-    firstName: "Harshit",
-    lastName: "Kumar",
-    username: null,
-    role: "USER",
-    password: "hashed-password",
-    failedLoginAttempts: 0,
-    lockUntil: null,
-    deletedAt: null,
-    status: "ACTIVE",
+    ...userData,
   } as any);
 
   vi.mocked(comparePassword).mockResolvedValue(true);
@@ -393,15 +397,7 @@ describe("AuthService", () => {
 
     it("should throw if account is deleted", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
-        id: "1",
-        email: loginData.email,
-        firstName: "Harshit",
-        lastName: "Kumar",
-        username: null,
-        role: "USER",
-        password: "hashed-password",
-        failedLoginAttempts: 0,
-        lockUntil: null,
+        ...userData,
         deletedAt: new Date(),
         status: "DELETED",
       } as any);
@@ -415,19 +411,41 @@ describe("AuthService", () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
+    it("should throw if account is suspended", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        ...userData,
+        status: "SUSPENDED",
+      } as any);
+
+      await expect(
+        authService.login(loginData, sessionMetadata),
+      ).rejects.toBeInstanceOf(AppError);
+
+      expect(comparePassword).not.toHaveBeenCalled();
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw if account is banned", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        ...userData,
+        status: "BANNED",
+      } as any);
+
+      await expect(
+        authService.login(loginData, sessionMetadata),
+      ).rejects.toBeInstanceOf(AppError);
+
+      expect(comparePassword).not.toHaveBeenCalled();
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
     it("should throw if account is locked", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
-        id: "1",
-        email: loginData.email,
-        firstName: "Harshit",
-        lastName: "Kumar",
-        username: null,
-        role: "USER",
-        password: "hashed-password",
+        ...userData,
         failedLoginAttempts: 4,
         lockUntil: new Date(Date.now() + 1000 * 60 * 10),
-        deletedAt: null,
-        status: "ACTIVE",
       } as any);
 
       await expect(
@@ -441,17 +459,7 @@ describe("AuthService", () => {
 
     it("should throw if password is incorrect", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
-        id: "1",
-        email: loginData.email,
-        firstName: "Harshit",
-        lastName: "Kumar",
-        username: null,
-        role: "USER",
-        password: "hashed-password",
-        failedLoginAttempts: 0,
-        lockUntil: null,
-        deletedAt: null,
-        status: "ACTIVE",
+        ...userData,
       } as any);
 
       vi.mocked(comparePassword).mockResolvedValue(false);
@@ -526,38 +534,7 @@ describe("AuthService", () => {
     });
 
     it("should create refresh token", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
-        id: "1",
-        email: loginData.email,
-        firstName: "Harshit",
-        lastName: "Kumar",
-        username: null,
-        role: "USER",
-        password: "hashed-password",
-        failedLoginAttempts: 0,
-        lockUntil: null,
-        deletedAt: null,
-        status: "ACTIVE",
-      } as any);
-
-      vi.mocked(comparePassword).mockResolvedValue(true);
-
-      vi.mocked(generateAccessToken).mockReturnValue("access-token");
-
-      vi.mocked(generateRefreshTokenWithJti).mockReturnValue({
-        token: "refresh-token",
-        jti: "refresh-jti",
-      });
-
-      vi.mocked(sha256Hex).mockReturnValue("hashed-jti");
-
-      tx.session.create.mockResolvedValue({
-        id: "session-id",
-      });
-
-      tx.refreshToken.create.mockResolvedValue({});
-
-      tx.user.update.mockResolvedValue({});
+      setupSuccessfulLogin();
 
       const result = await authService.login(loginData, sessionMetadata);
 

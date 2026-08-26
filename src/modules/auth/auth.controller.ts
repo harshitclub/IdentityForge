@@ -14,8 +14,20 @@ import { getSessionMetadata } from "../../shared/utils/session.util.js";
 import { authService } from "./auth.service.js";
 
 /**
- * @desc    Signup User
+ * ============================================================================
+ * Auth Controller Handlers
+ * ============================================================================
+ * Handles HTTP requests, extracts cookies/metadata, coordinates with AuthService,
+ * and sets/clears authentication cookies on client responses.
+ */
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. User Registration Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Registers a new user and queues a verification email.
  * @route   POST /api/v1/auth/signup
+ * @access  Public
  */
 export const signup = asyncHandler(async (req: Request, res: Response) => {
   await authService.signup(req.body);
@@ -30,10 +42,15 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Login User
+ * ----------------------------------------------------------------------------
+ * 2. User Login Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Authenticates credentials and sets HTTP-only access & refresh cookies.
  * @route   POST /api/v1/auth/login
+ * @access  Public
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
+  // Extract client device & browser metadata from request headers
   const sessionMetadata = getSessionMetadata(req);
 
   const { accessToken, refreshToken, user } = await authService.login(
@@ -41,6 +58,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     sessionMetadata,
   );
 
+  // Set short-lived Access Token in HTTP-only cookie
   res.cookie("if_accessToken", accessToken, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
@@ -48,6 +66,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     maxAge: env.JWT_ACCESS_EXPIRES_IN * 1000,
   });
 
+  // Set long-lived Refresh Token in HTTP-only cookie
   res.cookie("if_refreshToken", refreshToken, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
@@ -64,16 +83,19 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Logout User
+ * ----------------------------------------------------------------------------
+ * 3. User Logout Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Invalidates current refresh token & session and clears cookies.
  * @route   POST /api/v1/auth/logout
+ * @access  Public
  */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { if_refreshToken: refreshToken } = req.cookies;
 
   await authService.logout(refreshToken);
 
-  await authService.logout(refreshToken);
-
+  // Always clear authentication cookies on the client
   res.clearCookie("if_accessToken");
   res.clearCookie("if_refreshToken");
 
@@ -85,13 +107,16 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Refresh Access Token
+ * ----------------------------------------------------------------------------
+ * 4. Refresh Token Rotation Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Validates existing refresh token and issues rotated tokens.
  * @route   POST /api/v1/auth/refresh-token
+ * @access  Public (Cookie-based)
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
     const logger = getRequestLogger();
-    // Read refresh token cookie
     const { if_refreshToken: refreshToken } = req.cookies;
 
     if (!refreshToken) {
@@ -107,6 +132,7 @@ export const refreshToken = asyncHandler(
 
     const tokens = await authService.refreshToken(refreshToken);
 
+    // Issue updated rotated tokens in cookies
     res.cookie("if_accessToken", tokens.accessToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -131,8 +157,12 @@ export const refreshToken = asyncHandler(
 );
 
 /**
- * @desc    Verify Email
+ * ----------------------------------------------------------------------------
+ * 5. Email Verification Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Verifies account email using a one-time cryptographic token.
  * @route   POST /api/v1/auth/verify-email
+ * @access  Public
  */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const token = req.query.token;
@@ -156,8 +186,12 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Resend Verification Email
+ * ----------------------------------------------------------------------------
+ * 6. Resend Verification Email Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Generates a new verification token and sends email to authenticated user.
  * @route   POST /api/v1/auth/resend-verification
+ * @access  Private (Authenticated User)
  */
 export const resendVerification = asyncHandler(
   async (req: Request, res: Response) => {
@@ -172,8 +206,12 @@ export const resendVerification = asyncHandler(
 );
 
 /**
- * @desc    Forgot Password
+ * ----------------------------------------------------------------------------
+ * 7. Forgot Password Request Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Generates password reset token and queues password reset email.
  * @route   POST /api/v1/auth/forgot-password
+ * @access  Public
  */
 export const forgotPassword = asyncHandler(
   async (req: Request, res: Response) => {
@@ -188,8 +226,12 @@ export const forgotPassword = asyncHandler(
 );
 
 /**
- * @desc    Reset Password
+ * ----------------------------------------------------------------------------
+ * 8. Reset Password Execution Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Resets password using valid token and purges existing active sessions.
  * @route   POST /api/v1/auth/reset-password
+ * @access  Public
  */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
@@ -205,7 +247,7 @@ export const resetPassword = asyncHandler(
 
     await authService.resetPassword(token, req.body);
 
-    // Clear auth cookies
+    // Clear any active session cookies
     res.clearCookie("if_accessToken");
     res.clearCookie("if_refreshToken");
 
@@ -218,16 +260,21 @@ export const resetPassword = asyncHandler(
 );
 
 /**
- * @desc    Change Password
+ * ----------------------------------------------------------------------------
+ * 9. Change Password Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Changes password for authenticated user and revokes active sessions.
  * @route   POST /api/v1/auth/change-password
+ * @access  Private (Authenticated User)
  */
 export const changePassword = asyncHandler(
   async (req: Request, res: Response) => {
     await authService.changePassword(req.user.id, req.body);
 
-    // Clear auth cookies
+    // Clear cookies requiring user to re-login with new password
     res.clearCookie("if_accessToken");
     res.clearCookie("if_refreshToken");
+
     return apiResponse({
       req,
       res,
@@ -237,8 +284,12 @@ export const changePassword = asyncHandler(
 );
 
 /**
- * @desc    Get Current User
+ * ----------------------------------------------------------------------------
+ * 10. Get Current User Profile Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Fetches authenticated user profile (utilizes Redis cache).
  * @route   GET /api/v1/auth/me
+ * @access  Private (Authenticated User)
  */
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const { user, cached } = await authService.getMe(req.user.id);
@@ -253,14 +304,18 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Revoke All Sessions
+ * ----------------------------------------------------------------------------
+ * 11. Revoke All Sessions Handler
+ * ----------------------------------------------------------------------------
+ * @desc    Revokes all active sessions for current user and clears cookies.
  * @route   POST /api/v1/auth/revoke-all-sessions
+ * @access  Private (Authenticated User)
  */
 export const revokeAllSessions = asyncHandler(
   async (req: Request, res: Response) => {
     await authService.revokeAllSessions(req.user.id);
 
-    // Clear authentication cookies
+    // Clear client cookies
     res.clearCookie("if_accessToken");
     res.clearCookie("if_refreshToken");
 

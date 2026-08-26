@@ -1,0 +1,1699 @@
+{
+  "info": {
+    "_postman_id": "fa51efbf-780c-4e4f-944d-464dee366536",
+    "name": "IdentityForge",
+    "description": "# IdentityForge API\n\nIdentityForge is a production-ready Authentication and Authorization backend built using Node.js, Express.js and TypeScript.\n\nIt provides secure authentication, authorization, session management and user management APIs designed for scalable production applications.\n\n---\n\n## Features\n\n- User Registration\n    \n- Email Verification\n    \n- Secure Login\n    \n- JWT Authentication\n    \n- HttpOnly Cookie Authentication\n    \n- Refresh Token Rotation\n    \n- Password Reset\n    \n- Password Change\n    \n- Session Management\n    \n- Role Based Access Control (RBAC)\n    \n- Admin APIs\n    \n- Redis Caching\n    \n- Background Email Queue (BullMQ)\n    \n\n---\n\n## Base URL\n\n{{baseUrl}}\n\nExample\n\n[http://localhost:5000/api/v1](http://localhost:5000/api/v1)\n\n---\n\n## Authentication\n\nIdentityForge uses Cookie Based Authentication.\n\nAfter successful login the server sends\n\n- if_accessToken\n    \n- if_refreshToken\n    \n\nBoth cookies are:\n\n- HttpOnly\n    \n- SameSite=Strict\n    \n- Secure in Production\n    \n\nPostman automatically stores these cookies.\n\nNo Authorization header is required for authenticated requests.\n\n---\n\n## Response Format\n\nEvery API returns a consistent response.\n\nExample\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Request successful.\",\n    \"data\": {}\n}\n\n ```\n\n---\n\n## Error Format\n\n``` json\n{\n    \"success\": false,\n    \"message\": \"Validation failed.\",\n    \"errors\": []\n}\n\n ```\n\n---\n\n## Status Codes\n\n200 OK\n\n201 Created\n\n400 Bad Request\n\n401 Unauthorized\n\n403 Forbidden\n\n404 Not Found\n\n409 Conflict\n\n500 Internal Server Error\n\n---\n\n## API Modules\n\nAuthentication\n\nUser\n\nAdmin\n\nSystem\n\n---\n\n## Technologies\n\nNode.js\n\nExpress.js\n\nTypeScript\n\nPrisma ORM\n\nPostgreSQL\n\nRedis\n\nBullMQ\n\nJWT\n\nZod Validation\n\nWinston Logger\n\nDocker",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "20981213",
+    "_collection_link": "https://go.postman.co/collection/20981213-fa51efbf-780c-4e4f-944d-464dee366536?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 201\", () => {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\r",
+                  "        \"Account created successfully. Please verify your email.\"\r",
+                  "    );\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Data should be an empty object\", () => {\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "    pm.expect(Object.keys(json.data)).to.have.lengthOf(0);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Access token cookie should NOT exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_accessToken\")).to.eql(false);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Refresh token cookie should NOT exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_refreshToken\")).to.eql(false);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"firstName\":\"Harshit\",\r\n    \"lastName\":\"Kumar\",\r\n    \"email\":\"harshitclub@gmail.com\",\r\n    \"password\":\"Harshit@123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "# Signup\n\nCreates a new user account.\n\nA verification email is automatically sent after successful registration.\n\n---\n\n## Endpoint\n\nPOST /auth/signup\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Request Body\n\n``` json\n{\n    \"firstName\":\"Harshit\",\n    \"lastName\":\"Kumar\",\n    \"email\":\"harshit@example.com\",\n    \"password\":\"Harshit@123\"\n}\n\n ```\n\n---\n\n## Success Response\n\n201 Created\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Account created successfully. Please verify your email.\",\n    \"data\":{}\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Validation Error\n\n409 Email Already Exists\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nPassword is securely hashed.\n\nA verification token is generated.\n\nVerification email is queued using BullMQ.\n\nUser cannot login until email verification is completed."
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Login successful\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User object should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User should have required fields\", () => {\r",
+                  "    pm.expect(json.data.id).to.exist;\r",
+                  "    pm.expect(json.data.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.role).to.be.a(\"string\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Access token cookie should exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_accessToken\")).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Refresh token cookie should exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_refreshToken\")).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"harshitclub@gmail.com\",\r\n    \"password\":\"Harshit@123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "# Login\n\nAuthenticates an existing user.\n\nCreates a new authenticated session.\n\n---\n\n## Endpoint\n\nPOST /auth/login\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Request Body\n\n``` json\n{\n    \"email\":\"harshit@example.com\",\n    \"password\":\"Harshit@123\"\n}\n\n ```\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Login successful.\",\n    \"data\":{\n        \"id\":\"...\",\n        \"email\":\"...\",\n        \"firstName\":\"...\",\n        \"lastName\":\"...\",\n        \"username\":\"...\",\n        \"role\":\"USER\"\n    }\n}\n\n ```\n\n---\n\n## Cookies\n\nif_accessToken\n\nif_refreshToken\n\nAutomatically stored by Postman.\n\n---\n\n## Possible Errors\n\n401 Invalid Credentials\n\n403 Account Locked\n\n403 Deleted Account\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nCreates a new session.\n\nStores refresh token inside database.\n\nResets failed login attempts.\n\nUpdates last login timestamp.\n\nReturns authenticated user information."
+          },
+          "response": []
+        },
+        {
+          "name": "logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Logout successful\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "# Logout\n\nLogs out the currently authenticated user.\n\nRemoves the current authenticated session and clears authentication cookies.\n\n---\n\n## Endpoint\n\nPOST /auth/logout\n\n---\n\n## Authentication\n\nRequired\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Logout successful.\"\n}\n\n ```\n\n---\n\n## Cookies Cleared\n\nif_accessToken\n\nif_refreshToken\n\n---\n\n## Notes\n\nDeletes refresh token from database.\n\nDeletes active session.\n\nClears Redis cache.\n\nLogout is always successful even if cookies are already expired."
+          },
+          "response": []
+        },
+        {
+          "name": "refresh-token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Access token refreshed successfully\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Data should be an empty object\", () => {\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "    pm.expect(Object.keys(json.data)).to.have.lengthOf(0);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Access token cookie should exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_accessToken\")).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Refresh token cookie should exist\", () => {\r",
+                  "    pm.expect(pm.cookies.has(\"if_refreshToken\")).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "description": "# Refresh Access Token\n\nGenerates a new Access Token and Refresh Token using the existing Refresh Token.\n\nImplements Refresh Token Rotation.\n\n---\n\n## Endpoint\n\nPOST /auth/refresh-token\n\n---\n\n## Authentication\n\nRefresh Token Cookie Required\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Token refreshed successfully.\",\n    \"data\":{}\n}\n\n ```\n\n---\n\n## Cookies Updated\n\nif_accessToken\n\nif_refreshToken\n\n---\n\n## Possible Errors\n\n401 Refresh Token Missing\n\n401 Refresh Token Invalid\n\n401 Refresh Token Expired\n\n404 User Not Found\n\n---\n\n## Notes\n\nOld Refresh Token is deleted.\n\nNew Refresh Token is created.\n\nSession activity timestamp is updated.\n\nNew HttpOnly cookies are sent."
+          },
+          "response": []
+        },
+        {
+          "name": "verify-email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Email verified successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Data should be an empty object\", () => {\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "    pm.expect(Object.keys(json.data)).to.have.lengthOf(0);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email?token=318c580ec2be37b10268d491b66633c2637865883a4b7da999b8427ccd5cc5c8",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-email"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "318c580ec2be37b10268d491b66633c2637865883a4b7da999b8427ccd5cc5c8"
+                }
+              ]
+            },
+            "description": "# Verify Email\n\nVerifies a user's email address using a verification token.\n\n---\n\n## Endpoint\n\nPOST /auth/verify-email\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Query Parameters\n\ntoken\n\nExample\n\n/auth/verify-email?token=verification_token\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Email verified successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Invalid Token\n\n400 Expired Token\n\n409 Email Already Verified\n\n---\n\n## Notes\n\nMarks email as verified.\n\nActivates the user account.\n\nDeletes verification token after successful verification."
+          },
+          "response": []
+        },
+        {
+          "name": "resend-verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Verification email sent successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-verification",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "resend-verification"]
+            },
+            "description": "# Resend Verification Email\n\nGenerates a new email verification token and sends a new verification email.\n\n---\n\n## Endpoint\n\nPOST /auth/resend-verification\n\n---\n\n## Authentication\n\nRequired\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\":true,\n    \"message\":\"Verification email sent successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n404 User Not Found\n\n409 Email Already Verified\n\n---\n\n## Notes\n\nDeletes all previous verification tokens.\n\nCreates a new verification token.\n\nQueues a new verification email.\n\nPrevious verification links become invalid."
+          },
+          "response": []
+        },
+        {
+          "name": "forgot-password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\r",
+                  "        \"If an account with this email exists, a password reset link has been sent.\"\r",
+                  "    );\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"gautamharshit41@gmail.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "# Forgot Password\n\nGenerates a secure password reset token and sends a password reset email to the user.\n\nFor security reasons, this endpoint always returns a success response, even if the email address does not exist.\n\n---\n\n## Endpoint\n\nPOST /auth/forgot-password\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Request Body\n\n``` json\n{\n    \"email\": \"harshit@example.com\"\n}\n\n ```\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"If an account with this email exists, a password reset link has been sent.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Validation Error\n\n500 Internal Server Error\n\n---\n\n## Security\n\nThis endpoint prevents user enumeration.\n\nWhether the email exists or not, the API returns the same success response.\n\nAttackers cannot determine whether an account exists.\n\n---\n\n## Notes\n\nAny previous unused password reset tokens are deleted.\n\nA new secure password reset token is generated.\n\nOnly the hashed token is stored in the database.\n\nA password reset email is queued using BullMQ."
+          },
+          "response": []
+        },
+        {
+          "name": "reset-password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Password has been reset successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"newPassword\":\"Harshit@7505\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password?token=33636a3b4db2e653db328b698906c1768f3efdf25c967eac29bd699494c31148",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "33636a3b4db2e653db328b698906c1768f3efdf25c967eac29bd699494c31148"
+                }
+              ]
+            },
+            "description": "# Reset Password\n\nResets a user's password using a valid password reset token.\n\nAll active sessions are revoked after a successful password reset.\n\n---\n\n## Endpoint\n\nPOST /auth/reset-password\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Query Parameters\n\n| Parameter | Required | Description |\n| --- | --- | --- |\n| token | Yes | Password reset token |\n\nExample\n\nPOST /auth/reset-password?token=xxxxxxxx\n\n---\n\n## Request Body\n\n``` json\n{\n    \"newPassword\": \"NewPassword@123\"\n}\n\n ```\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Password has been reset successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Invalid Token\n\n400 Token Already Used\n\n400 Token Expired\n\n400 New Password Matches Current Password\n\n500 Internal Server Error\n\n---\n\n## Security\n\nPassword reset tokens are one-time use.\n\nOnly hashed reset tokens are stored in the database.\n\n---\n\n## Notes\n\nUpdates the user's password.\n\nMarks the reset token as used.\n\nDeletes all refresh tokens.\n\nDeletes all user sessions.\n\nClears Redis cached profile.\n\nClears authentication cookies."
+          },
+          "response": []
+        },
+        {
+          "name": "change-password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Password changed successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"currentPassword\":\"Harshit@7505\",\r\n    \"newPassword\":\"Harshit@123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "# Change Password\n\nAllows an authenticated user to change their password.\n\nChanging the password automatically logs the user out from every device.\n\n---\n\n## Endpoint\n\nPOST /auth/change-password\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Request Body\n\n``` json\n{\n    \"currentPassword\": \"CurrentPassword@123\",\n    \"newPassword\": \"NewPassword@123\"\n}\n\n ```\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Password changed successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Current Password Incorrect\n\n400 New Password Matches Current Password\n\n401 Unauthorized\n\n404 User Not Found\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nVerifies the current password.\n\nHashes the new password.\n\nDeletes every refresh token.\n\nDeletes every active session.\n\nClears Redis cached profile.\n\nClears authentication cookies.\n\nThe user must login again after changing the password."
+          },
+          "response": []
+        },
+        {
+          "name": "me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Profile retrieved successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User object should exist\", () => {\r",
+                  "    pm.expect(json.data.user).to.exist;\r",
+                  "    pm.expect(json.data.user).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User should have required fields\", () => {\r",
+                  "    pm.expect(json.data.user.id).to.exist;\r",
+                  "    pm.expect(json.data.user.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.user.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.user.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.user.role).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.user.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.user.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"harshitclub@gmail.com\",\r\n    \"password\":\"Harshit@123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "# Get Current User\n\nReturns the currently authenticated user's profile.\n\nThis endpoint uses Redis caching to improve response time.\n\n---\n\n## Endpoint\n\nGET /auth/me\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Profile fetched successfully.\",\n    \"data\": {\n        \"user\": {\n            \"id\": \"...\",\n            \"firstName\": \"...\",\n            \"lastName\": \"...\",\n            \"username\": \"...\",\n            \"email\": \"...\",\n            \"role\": \"USER\",\n            \"isEmailVerified\": true,\n            \"createdAt\": \"...\",\n            \"updatedAt\": \"...\",\n            \"lastLoginAt\": \"...\"\n        }\n    },\n    \"cached\": false\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n404 User Not Found\n\n500 Internal Server Error\n\n---\n\n## Cache\n\nThe response includes\n\n``` json\n{\n    \"cached\": true\n}\n\n ```\n\nwhen served from Redis.\n\nOtherwise\n\n``` json\n{\n    \"cached\": false\n}\n\n ```\n\nThe profile is cached for five minutes.\n\n---\n\n## Notes\n\nChecks Redis before querying the database.\n\nStores user profile in Redis after a cache miss.\n\nReturns only public profile information."
+          },
+          "response": []
+        },
+        {
+          "name": "revoke-all-sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"All sessions revoked successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"harshitclub@gmail.com\",\r\n    \"password\":\"Harshit@123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/revoke-all-sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "revoke-all-sessions"]
+            },
+            "description": "# Revoke All Sessions\n\nLogs the user out from every device by deleting all active sessions and refresh tokens.\n\nThe current session is also revoked.\n\n---\n\n## Endpoint\n\nPOST /auth/revoke-all-sessions\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"All sessions revoked successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n404 User Not Found\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nDeletes every refresh token associated with the user.\n\nDeletes every active session.\n\nClears Redis cached profile.\n\nClears authentication cookies.\n\nThe user must login again on every device."
+          },
+          "response": []
+        }
+      ],
+      "description": "# Authentication APIs\n\nAuthentication APIs manage user identity, authentication and account security.\n\nThese endpoints allow users to:\n\n- Create an account\n    \n- Verify email\n    \n- Login\n    \n- Logout\n    \n- Refresh authentication\n    \n- Reset password\n    \n- Change password\n    \n- Manage sessions\n    \n\n---\n\n## Authentication Strategy\n\nCookie Based Authentication\n\nThe backend stores authentication tokens inside secure HttpOnly cookies.\n\nClients never receive JWT tokens directly.\n\n---\n\n## Security Features\n\nPassword Hashing\n\nEmail Verification\n\nRefresh Token Rotation\n\nSession Tracking\n\nAccount Locking\n\nPassword Reset Tokens\n\nRedis Caching\n\nSecure Cookies\n\n---\n\n## Available APIs\n\nPOST /auth/signup\n\nPOST /auth/login\n\nPOST /auth/logout\n\nPOST /auth/refresh-token\n\nPOST /auth/verify-email\n\nPOST /auth/resend-verification\n\nPOST /auth/forgot-password\n\nPOST /auth/reset-password\n\nPOST /auth/change-password\n\nGET /auth/me\n\nPOST /auth/revoke-all-sessions\n\n---\n\n## Authentication Flow\n\nUser Signup\n\n↓\n\nVerification Email Sent\n\n↓\n\nVerify Email\n\n↓\n\nLogin\n\n↓\n\nHttpOnly Cookies Created\n\n↓\n\nAuthenticated Requests\n\n↓\n\nRefresh Token Rotation\n\n↓\n\nLogout\n\nor\n\n↓\n\nRevoke All Sessions\n\n---\n\n## Password Recovery Flow\n\nForgot Password\n\n↓\n\nPassword Reset Email\n\n↓\n\nReset Password\n\n↓\n\nLogout From Every Device\n\n↓\n\nLogin Again"
+    },
+    {
+      "name": "user",
+      "item": [
+        {
+          "name": "profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Profile updated successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should have required fields\", () => {\r",
+                  "    pm.expect(json.data.id).to.exist;\r",
+                  "    pm.expect(json.data.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.role).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.status).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"lastName\":\"Singh\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "# Update Profile\n\nUpdates the authenticated user's profile information.\n\nOnly the fields provided in the request body are updated.\n\n---\n\n## Endpoint\n\nPATCH /users/profile\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Request Body\n\n``` json\n{\n    \"firstName\": \"Harshit\",\n    \"lastName\": \"Kumar\",\n    \"username\": \"harshitdev\"\n}\n\n ```\n\nAll fields are optional.\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Profile updated successfully.\",\n    \"data\": {\n        \"id\": \"...\",\n        \"firstName\": \"...\",\n        \"lastName\": \"...\",\n        \"username\": \"...\",\n        \"email\": \"...\",\n        \"avatarUrl\": null,\n        \"role\": \"USER\",\n        \"status\": \"ACTIVE\",\n        \"isEmailVerified\": true,\n        \"updatedAt\": \"...\"\n    }\n}\n\n ```\n\n---\n\n## Possible Errors\n\n400 Validation Error\n\n401 Unauthorized\n\n404 User Not Found\n\n409 Username Already Taken\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nOnly supplied fields are updated.\n\nUsername must be unique.\n\nRedis cached profile is automatically invalidated.\n\nEmail cannot be updated using this endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Account deleted successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/account",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "account"]
+            },
+            "description": "# Delete Account\n\nSoft deletes the authenticated user's account.\n\nThe account is marked as deleted instead of being permanently removed from the database.\n\n---\n\n## Endpoint\n\nDELETE /users/account\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Account deleted successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n404 User Not Found\n\n400 Account Already Deleted\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nPerforms a soft delete.\n\nUser status becomes DELETED.\n\nDeletes all refresh tokens.\n\nDeletes all active sessions.\n\nClears Redis cached profile.\n\nClears authentication cookies.\n\nThe user is logged out from every device immediately."
+          },
+          "response": []
+        },
+        {
+          "name": "sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Sessions fetched successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Sessions should be an array\", () => {\r",
+                  "    pm.expect(json.data.sessions).to.be.an(\"array\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Total should be a number\", () => {\r",
+                  "    pm.expect(json.data.total).to.be.a(\"number\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Total should match sessions length\", () => {\r",
+                  "    pm.expect(json.data.total).to.eql(json.data.sessions.length);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Each session should have required fields\", () => {\r",
+                  "    json.data.sessions.forEach(session => {\r",
+                  "        pm.expect(session.id).to.exist;\r",
+                  "        pm.expect(session.isCurrent).to.be.a(\"boolean\");\r",
+                  "        pm.expect(session.lastUsedAt).to.exist;\r",
+                  "        pm.expect(session.expiresAt).to.exist;\r",
+                  "        pm.expect(session.createdAt).to.exist;\r",
+                  "    });\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "sessions"]
+            },
+            "description": "# Get Active Sessions\n\nReturns all active sessions associated with the authenticated user.\n\nExpired sessions are automatically excluded.\n\n---\n\n## Endpoint\n\nGET /users/sessions\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Sessions fetched successfully.\",\n    \"data\": {\n        \"sessions\": [\n            {\n                \"id\": \"...\",\n                \"ipAddress\": \"...\",\n                \"browser\": \"...\",\n                \"os\": \"...\",\n                \"device\": \"...\",\n                \"country\": \"...\",\n                \"city\": \"...\",\n                \"isCurrent\": true,\n                \"lastUsedAt\": \"...\",\n                \"expiresAt\": \"...\",\n                \"createdAt\": \"...\"\n            }\n        ],\n        \"total\": 1\n    }\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nOnly active sessions are returned.\n\nSessions are sorted by most recently used.\n\nThe current session is identified using the `isCurrent` property.\n\nUseful for account security dashboards."
+          },
+          "response": []
+        },
+        {
+          "name": "sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Session revoked successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/sessions/cmrt2evxu000074la30bf4bdo",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "sessions", "cmrt2evxu000074la30bf4bdo"]
+            },
+            "description": "# Revoke Session\n\nTerminates a specific session belonging to the authenticated user.\n\nThis endpoint allows users to logout from individual devices without affecting the current session.\n\n---\n\n## Endpoint\n\nDELETE /users/sessions/:sessionId\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Path Parameters\n\n| Parameter | Description |\n| --- | --- |\n| sessionId | Session identifier |\n\nExample\n\nDELETE /users/sessions/cmrah4ttq0000zwlamscdmjwm\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Session revoked successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n404 Session Not Found\n\n400 Current Session Cannot Be Revoked\n\n500 Internal Server Error\n\n---\n\n## Security\n\nUsers cannot revoke sessions belonging to another user.\n\nThe current session cannot be revoked individually.\n\n---\n\n## Notes\n\nDeletes the selected session.\n\nAssociated refresh tokens are automatically removed through database cascade rules.\n\nOther active sessions remain unaffected.\n\nTo logout from every device, use the **Revoke All Sessions** endpoint instead."
+          },
+          "response": []
+        }
+      ],
+      "description": "# User APIs\n\nUser APIs allow authenticated users to manage their own account.\n\nThese endpoints provide profile management, account deletion and session management.\n\n---\n\n## Authentication\n\nAll endpoints in this module require authentication.\n\nAuthentication is performed using HttpOnly Cookies.\n\n---\n\n## Features\n\n- Update Profile\n    \n- Delete Account\n    \n- View Active Sessions\n    \n- Revoke Individual Sessions\n    \n\n---\n\n## Security\n\n• Only authenticated users can access these endpoints.\n\n• Users can only access their own resources.\n\n• Session revocation prevents users from revoking sessions belonging to other users.\n\n• Current session cannot be revoked individually.\n\n---\n\n## Cache\n\nUser profile updates automatically invalidate cached profile data stored in Redis.\n\n---\n\n## Available APIs\n\nPATCH /users/profile\n\nDELETE /users/account\n\nGET /users/sessions\n\nDELETE /users/sessions/:sessionId\n\n---\n\n## User Management Flow\n\nLogin\n\n↓\n\nView Profile\n\n↓\n\nUpdate Profile\n\n↓\n\nView Active Sessions\n\n↓\n\nRevoke Old Device Sessions\n\n↓\n\nDelete Account (Optional)\n\n---\n\n## Session Management\n\nCurrent Device\n\n✓ Cannot Be Revoked Individually\n\nOther Devices\n\n✓ Can Be Revoked\n\nAll Devices\n\n✓ Use Revoke All Sessions API\n\n---\n\n## Cache Behaviour\n\nGet Current User\n\n↓\n\nRedis Cache\n\n↓\n\nProfile Updated\n\n↓\n\nCache Invalidated\n\n↓\n\nNext Request Fetches Fresh Data"
+    },
+    {
+      "name": "admin",
+      "item": [
+        {
+          "name": "users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Users fetched successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Users should be an array\", () => {\r",
+                  "    pm.expect(json.data.users).to.be.an(\"array\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Pagination object should exist\", () => {\r",
+                  "    pm.expect(json.data.pagination).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Pagination should have required fields\", () => {\r",
+                  "    pm.expect(json.data.pagination.page).to.be.a(\"number\");\r",
+                  "    pm.expect(json.data.pagination.limit).to.be.a(\"number\");\r",
+                  "    pm.expect(json.data.pagination.totalUsers).to.be.a(\"number\");\r",
+                  "    pm.expect(json.data.pagination.totalPages).to.be.a(\"number\");\r",
+                  "    pm.expect(json.data.pagination.hasNextPage).to.be.a(\"boolean\");\r",
+                  "    pm.expect(json.data.pagination.hasPreviousPage).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Each user should have required fields\", () => {\r",
+                  "    json.data.users.forEach(user => {\r",
+                  "        pm.expect(user.id).to.exist;\r",
+                  "        pm.expect(user.firstName).to.be.a(\"string\");\r",
+                  "        pm.expect(user.lastName).to.be.a(\"string\");\r",
+                  "        pm.expect(user.email).to.be.a(\"string\");\r",
+                  "        pm.expect(user.role).to.be.a(\"string\");\r",
+                  "        pm.expect(user.status).to.be.a(\"string\");\r",
+                  "        pm.expect(user.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "    });\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    json.data.users.forEach(user => {\r",
+                  "        pm.expect(user.password).to.eql(undefined);\r",
+                  "    });\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "# Get All Users\n\nReturns a paginated list of users.\n\nResults are cached using Redis to improve performance.\n\n---\n\n## Endpoint\n\nGET /admin/users\n\n---\n\n## Authentication\n\nRequired\n\nAdministrator Access\n\n---\n\n## Query Parameters\n\n| Parameter | Required | Description |\n| --- | --- | --- |\n| page | No | Page number (Default: 1) |\n| limit | No | Number of users per page (Default: 10, Maximum: 100) |\n\nExample\n\nGET /admin/users?page=1&limit=10\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Users fetched successfully.\",\n    \"data\": {\n        \"users\": [],\n        \"pagination\": {\n            \"page\": 1,\n            \"limit\": 10,\n            \"totalUsers\": 100,\n            \"totalPages\": 10,\n            \"hasNextPage\": true,\n            \"hasPreviousPage\": false\n        }\n    },\n    \"cached\": false\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n500 Internal Server Error\n\n---\n\n## Cache\n\nResponses are cached for five minutes.\n\nThe response includes\n\n``` json\n{\n    \"cached\": true\n}\n\n ```\n\nwhen served from Redis.\n\n---\n\n## Notes\n\nUsers are sorted by newest accounts first.\n\nPagination metadata is included.\n\nRedis cache is automatically invalidated whenever a user is updated or deleted."
+          },
+          "response": []
+        },
+        {
+          "name": "user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"User fetched successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"User should have required fields\", () => {\r",
+                  "    pm.expect(json.data.id).to.exist;\r",
+                  "    pm.expect(json.data.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.role).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.status).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/cmrszxlzz0000zola1vuaemx5",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "cmrszxlzz0000zola1vuaemx5"]
+            },
+            "description": "# Get User By ID\n\nReturns detailed information for a specific user.\n\n---\n\n## Endpoint\n\nGET /admin/users/:id\n\n---\n\n## Authentication\n\nRequired\n\nAdministrator Access\n\n---\n\n## Path Parameters\n\n| Parameter | Description |\n| --- | --- |\n| id | User Identifier |\n\nExample\n\nGET /admin/users/cmrddevje0000tkla718m2w4q\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"User fetched successfully.\",\n    \"data\": {\n        \"id\": \"...\",\n        \"firstName\": \"...\",\n        \"lastName\": \"...\",\n        \"email\": \"...\",\n        \"role\": \"USER\",\n        \"status\": \"ACTIVE\",\n        \"isEmailVerified\": true,\n        \"createdAt\": \"...\",\n        \"updatedAt\": \"...\"\n    },\n    \"cached\": false\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n404 User Not Found\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nChecks Redis before querying the database.\n\nStores the user in Redis after a cache miss.\n\nReturns only administrative user information."
+          },
+          "response": []
+        },
+        {
+          "name": "user-role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"User role updated successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should have required fields\", () => {\r",
+                  "    pm.expect(json.data.id).to.exist;\r",
+                  "    pm.expect(json.data.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.role).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.status).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"role\":\"ADMIN\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/cmrszxlzz0000zola1vuaemx5/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "cmrszxlzz0000zola1vuaemx5", "role"]
+            },
+            "description": "# Update User Role\n\nUpdates the role assigned to a user.\n\n---\n\n## Endpoint\n\nPATCH /admin/users/:id/role\n\n---\n\n## Authentication\n\nRequired\n\nAdministrator Access\n\n---\n\n## Path Parameters\n\n| Parameter | Description |\n| --- | --- |\n| id | User Identifier |\n\n---\n\n## Request Body\n\n``` json\n{\n    \"role\": \"ADMIN\"\n}\n\n ```\n\nSupported Roles\n\n- USER\n    \n- ADMIN\n    \n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"User role updated successfully.\",\n    \"data\": {\n        \"id\": \"...\",\n        \"email\": \"...\",\n        \"role\": \"ADMIN\",\n        \"status\": \"ACTIVE\"\n    }\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n404 User Not Found\n\n400 User Already Has This Role\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nOnly administrators can update roles.\n\nRedis cache for the user is cleared.\n\nPaginated user caches are also invalidated automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "user-status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"User status updated successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Updated user should have required fields\", () => {\r",
+                  "    pm.expect(json.data.id).to.exist;\r",
+                  "    pm.expect(json.data.firstName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.lastName).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.email).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.role).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.status).to.be.a(\"string\");\r",
+                  "    pm.expect(json.data.isEmailVerified).to.be.a(\"boolean\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Password should not be returned\", () => {\r",
+                  "    pm.expect(json.data.password).to.eql(undefined);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"status\":\"ACTIVE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/cmrszxlzz0000zola1vuaemx5/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "cmrszxlzz0000zola1vuaemx5", "status"]
+            },
+            "description": "# Update User Status\n\nUpdates the account status of a user.\n\n---\n\n## Endpoint\n\nPATCH /admin/users/:id/status\n\n---\n\n## Authentication\n\nRequired\n\nAdministrator Access\n\n---\n\n## Path Parameters\n\n| Parameter | Description |\n| --- | --- |\n| id | User Identifier |\n\n---\n\n## Request Body\n\n``` json\n{\n    \"status\": \"ACTIVE\"\n}\n\n ```\n\nSupported Statuses\n\n- ACTIVE\n    \n- INACTIVE\n    \n- SUSPENDED\n    \n- DELETED\n    \n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"User status updated successfully.\",\n    \"data\": {\n        \"id\": \"...\",\n        \"email\": \"...\",\n        \"status\": \"ACTIVE\"\n    }\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n404 User Not Found\n\n400 User Already Has This Status\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nUpdates the account status.\n\nClears Redis cache for the affected user.\n\nInvalidates all cached paginated user lists."
+          },
+          "response": []
+        },
+        {
+          "name": "user-delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"User deleted successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/cmrszxlzz0000zola1vuaemx5",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "cmrszxlzz0000zola1vuaemx5"]
+            },
+            "description": "# Delete User\n\nMarks a user account as deleted.\n\nThis endpoint performs a logical deletion by updating the user's status instead of permanently removing the database record.\n\n---\n\n## Endpoint\n\nDELETE /admin/users/:id\n\n---\n\n## Authentication\n\nRequired\n\nAdministrator Access\n\n---\n\n## Path Parameters\n\n| Parameter | Description |\n| --- | --- |\n| id | User Identifier |\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"User deleted successfully.\"\n}\n\n ```\n\n---\n\n## Possible Errors\n\n401 Unauthorized\n\n403 Forbidden\n\n404 User Not Found\n\n400 User Already Deleted\n\n500 Internal Server Error\n\n---\n\n## Notes\n\nThe user record remains in the database.\n\nThe user's status is changed to DELETED.\n\nRedis cache is cleared.\n\nAll cached user list responses are invalidated."
+          },
+          "response": []
+        }
+      ],
+      "description": "# Admin APIs\n\nAdmin APIs provide administrative access to manage users within the IdentityForge platform.\n\nThese endpoints allow administrators to view users, inspect user details, update user roles, manage account status and perform administrative actions.\n\n---\n\n## Authentication\n\nRequired\n\nHttpOnly Authentication Cookies\n\n---\n\n## Authorization\n\nAdministrator Only\n\nUsers without administrative privileges are not allowed to access these endpoints.\n\n---\n\n## Features\n\n- List Users\n    \n- View User Details\n    \n- Update User Role\n    \n- Update User Status\n    \n- Delete User\n    \n\n---\n\n## Cache\n\nUser list and user detail responses are cached using Redis.\n\nWhenever a user is updated or deleted, the related cache entries are automatically invalidated.\n\n---\n\n## Available APIs\n\nGET /admin/users\n\nGET /admin/users/:id\n\nPATCH /admin/users/:id/role\n\nPATCH /admin/users/:id/status\n\nDELETE /admin/users/:id\n\n---\n\n## Administrative Workflow\n\nAdministrator Login\n\n↓\n\nView Users\n\n↓\n\nInspect User Details\n\n↓\n\nUpdate User Role\n\n↓\n\nUpdate User Status\n\n↓\n\nDelete User (If Required)\n\n---\n\n## Cache Behaviour\n\nGet Users\n\n↓\n\nRedis Cache\n\n↓\n\nUpdate User\n\n↓\n\nInvalidate User Cache\n\n↓\n\nInvalidate Paginated User Cache\n\n↓\n\nNext Request Fetches Fresh Data\n\n---\n\n## Security\n\nOnly authenticated administrators can access these endpoints.\n\nAdministrative actions immediately invalidate cached user data to ensure consistency across the application.\n\nDeleted users are soft deleted by updating their account status rather than removing records from the database."
+    },
+    {
+      "name": "system",
+      "item": [
+        {
+          "name": "health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Application is healthy.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Health status should be healthy\", () => {\r",
+                  "    pm.expect(json.data.status).to.eql(\"healthy\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Services should exist\", () => {\r",
+                  "    pm.expect(json.data.services).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Database should be up\", () => {\r",
+                  "    pm.expect(json.data.services.database).to.eql(\"up\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Redis should be up\", () => {\r",
+                  "    pm.expect(json.data.services.redis).to.eql(\"up\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/health",
+              "host": ["{{host}}"],
+              "path": ["system", "health"]
+            },
+            "description": "# Health Check\n\nReturns the overall health status of the application.\n\nThis endpoint verifies that all critical dependencies required by the application are functioning correctly.\n\n---\n\n## Endpoint\n\nGET /system/health\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application is healthy.\",\n    \"data\": {\n        \"status\": \"healthy\",\n        \"services\": {\n            \"database\": \"up\",\n            \"redis\": \"up\"\n        }\n    }\n}\n\n ```\n\n---\n\n## Failure Response\n\n503 Service Unavailable\n\n``` json\n{\n    \"success\": false,\n    \"message\": \"Application is unhealthy.\",\n    \"data\": {\n        \"status\": \"unhealthy\",\n        \"services\": {\n            \"database\": \"down\",\n            \"redis\": \"up\"\n        }\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nChecks database connectivity.\n\nChecks Redis connectivity.\n\nReturns HTTP 503 if any required dependency is unavailable.\n\nUsed by monitoring systems to determine application health."
+          },
+          "response": []
+        },
+        {
+          "name": "ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Application is ready.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application should be ready\", () => {\r",
+                  "    pm.expect(json.data.ready).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Services should exist\", () => {\r",
+                  "    pm.expect(json.data.services).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Database should be up\", () => {\r",
+                  "    pm.expect(json.data.services.database).to.eql(\"up\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Redis should be up\", () => {\r",
+                  "    pm.expect(json.data.services.redis).to.eql(\"up\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/ready",
+              "host": ["{{host}}"],
+              "path": ["system", "ready"]
+            },
+            "description": "# Readiness Check\n\nDetermines whether the application is ready to receive incoming requests.\n\nUnlike the liveness endpoint, readiness verifies that required services are available before traffic is routed to the application.\n\n---\n\n## Endpoint\n\nGET /system/ready\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application is ready.\",\n    \"data\": {\n        \"ready\": true,\n        \"services\": {\n            \"database\": \"up\",\n            \"redis\": \"up\"\n        }\n    }\n}\n\n ```\n\n---\n\n## Failure Response\n\n503 Service Unavailable\n\n``` json\n{\n    \"success\": false,\n    \"message\": \"Application is not ready.\",\n    \"data\": {\n        \"ready\": false,\n        \"services\": {\n            \"database\": \"down\",\n            \"redis\": \"up\"\n        }\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nUsed by Kubernetes readiness probes.\n\nEnsures traffic is only routed to healthy instances.\n\nRequires both the database and Redis to be available."
+          },
+          "response": []
+        },
+        {
+          "name": "live",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Application is alive.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application should be alive\", () => {\r",
+                  "    pm.expect(json.data.alive).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Uptime should be a number\", () => {\r",
+                  "    pm.expect(json.data.uptime).to.be.a(\"number\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Uptime should be greater than or equal to 0\", () => {\r",
+                  "    pm.expect(json.data.uptime).to.be.at.least(0);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/live",
+              "host": ["{{host}}"],
+              "path": ["system", "live"]
+            },
+            "description": "# Liveness Check\n\nDetermines whether the application process is currently running.\n\nThis endpoint confirms that the server process is alive.\n\n---\n\n## Endpoint\n\nGET /system/live\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application is alive.\",\n    \"data\": {\n        \"alive\": true,\n        \"uptime\": 2548\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nReturns the application's uptime in seconds.\n\nDoes not verify database or Redis connectivity.\n\nCommonly used by Kubernetes liveness probes.\n\nIf this endpoint fails, the application instance should be restarted."
+          },
+          "response": []
+        },
+        {
+          "name": "version",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Application version fetched successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application name should exist\", () => {\r",
+                  "    pm.expect(json.data.name).to.be.a(\"string\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application version should exist\", () => {\r",
+                  "    pm.expect(json.data.version).to.be.a(\"string\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/version",
+              "host": ["{{host}}"],
+              "path": ["system", "version"]
+            },
+            "description": "# Application Version\n\nReturns the current application name and version.\n\nUseful for deployment verification and debugging.\n\n---\n\n## Endpoint\n\nGET /system/version\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application version fetched successfully.\",\n    \"data\": {\n        \"name\": \"IdentityForge\",\n        \"version\": \"1.0.0\"\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nVersion information is loaded from the application environment configuration.\n\nUseful after deployments to verify the running version."
+          },
+          "response": []
+        },
+        {
+          "name": "info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Application information fetched successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application information should exist\", () => {\r",
+                  "    pm.expect(json.data).to.exist;\r",
+                  "    pm.expect(json.data).to.be.an(\"object\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Application information should not be empty\", () => {\r",
+                  "    pm.expect(Object.keys(json.data).length).to.be.greaterThan(0);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/info",
+              "host": ["{{host}}"],
+              "path": ["system", "info"]
+            },
+            "description": "# Application Information\n\nReturns general information about the running IdentityForge application.\n\nThis endpoint provides metadata that can assist developers, administrators and monitoring tools.\n\n---\n\n## Endpoint\n\nGET /system/info\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\nExample\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application information fetched successfully.\",\n    \"data\": {\n        \"...\": \"Application metadata\"\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nReturns application metadata generated by the server.\n\nUseful for diagnostics and operational visibility.\n\nThe exact response may vary depending on the application configuration."
+          },
+          "response": []
+        },
+        {
+          "name": "cache-reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Status code should be 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be successful\", () => {\r",
+                  "    pm.expect(json.success).to.eql(true);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Success message should be correct\", () => {\r",
+                  "    pm.expect(json.message).to.eql(\"Redis cache cleared successfully.\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response should be JSON\", () => {\r",
+                  "    pm.expect(\r",
+                  "        pm.response.headers.get(\"Content-Type\")\r",
+                  "    ).to.include(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response time should be under 1000ms\", () => {\r",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/system/cache/reset",
+              "host": ["{{host}}"],
+              "path": ["system", "cache", "reset"]
+            },
+            "description": "# Application Information\n\nReturns general information about the running IdentityForge application.\n\nThis endpoint provides metadata that can assist developers, administrators and monitoring tools.\n\n---\n\n## Endpoint\n\nGET /system/info\n\n---\n\n## Authentication\n\nNot Required\n\n---\n\n## Success Response\n\n200 OK\n\nExample\n\n``` json\n{\n    \"success\": true,\n    \"message\": \"Application information fetched successfully.\",\n    \"data\": {\n        \"...\": \"Application metadata\"\n    }\n}\n\n ```\n\n---\n\n## Notes\n\nReturns application metadata generated by the server.\n\nUseful for diagnostics and operational visibility.\n\nThe exact response may vary depending on the application configuration."
+          },
+          "response": []
+        }
+      ],
+      "description": "# System APIs\n\nSystem APIs provide operational and monitoring information about the IdentityForge application.\n\nThese endpoints are intended for infrastructure, monitoring tools, deployment pipelines and administrators.\n\n---\n\n## Authentication\n\nNot Required\n\nAll endpoints are publicly accessible.\n\n---\n\n## Features\n\n- Health Monitoring\n    \n- Readiness Checks\n    \n- Liveness Checks\n    \n- Application Version\n    \n- Application Information\n    \n\n---\n\n## Typical Consumers\n\n- Docker\n    \n- Kubernetes\n    \n- Nginx\n    \n- Prometheus\n    \n- Grafana\n    \n- Uptime Monitoring Services\n    \n- CI/CD Pipelines\n    \n- DevOps Engineers\n    \n\n---\n\n## Available APIs\n\nGET /system/health\n\nGET /system/ready\n\nGET /system/live\n\nGET /system/version\n\nGET /system/info\n\n---\n\n## System Monitoring Flow\n\nApplication Starts\n\n↓\n\nHealth Check\n\n↓\n\nReadiness Check\n\n↓\n\nReceive Traffic\n\n↓\n\nLiveness Monitoring\n\n↓\n\nVersion Verification\n\n↓\n\nApplication Information\n\n---\n\n## Health Monitoring\n\nHealth\n\n↓\n\nChecks Database\n\n↓\n\nChecks Redis\n\n↓\n\nReturns Overall Application Health\n\n---\n\n## Infrastructure Usage\n\nHealth Endpoint\n\nUsed by monitoring systems.\n\nReady Endpoint\n\nUsed by load balancers and Kubernetes.\n\nLive Endpoint\n\nUsed to determine if the application process should be restarted.\n\nVersion Endpoint\n\nUsed to verify deployed releases.\n\nInfo Endpoint\n\nUsed for diagnostics and operational visibility."
+    }
+  ]
+}

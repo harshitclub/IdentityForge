@@ -1,7 +1,19 @@
 import { z } from "zod";
 
 /**
- * User Update Schema
+ * ============================================================================
+ * User Request Validation Schemas (Zod)
+ * ============================================================================
+ * Strict input validation schemas for user self-service operations.
+ */
+
+/**
+ * Validates user profile update payload.
+ * Constraints:
+ * - firstName: optional, min 3, max 100 chars
+ * - lastName: optional, min 3, max 100 chars
+ * - username: optional, min 3, max 50 chars, alphanumeric + underscore only
+ * - refine: at least one field must be provided
  */
 export const updateSchema = z
   .object({

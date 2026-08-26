@@ -23,7 +23,20 @@ import {
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
 import { rateLimiter } from "../../shared/middlewares/redisRateLimiter.js";
 
+/**
+ * ============================================================================
+ * Authentication Routes
+ * ============================================================================
+ * HTTP route definitions and OpenAPI/Swagger specifications for user
+ * registration, login, token rotation, password recovery, and session control.
+ */
 const authRoutes = Router();
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. User Registration Flow
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -74,6 +87,12 @@ const authRoutes = Router();
 authRoutes.post("/signup", validate(registerSchema), signup);
 
 /**
+ * ----------------------------------------------------------------------------
+ * 2. User Authentication & Session Lifecycle
+ * ----------------------------------------------------------------------------
+ */
+
+/**
  * @swagger
  * /auth/login:
  *   post:
@@ -109,7 +128,7 @@ authRoutes.post("/signup", validate(registerSchema), signup);
  *       401:
  *         description: Invalid email or password.
  *       403:
- *         description: Account is locked.
+ *         description: Account is locked, suspended, or banned.
  *       500:
  *         description: Internal server error.
  */
@@ -155,6 +174,12 @@ authRoutes.post("/logout", logout);
  *         description: Internal server error.
  */
 authRoutes.post("/refresh-token", refreshToken);
+
+/**
+ * ----------------------------------------------------------------------------
+ * 3. Email Verification Flow
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -210,6 +235,12 @@ authRoutes.post("/verify-email", verifyEmail);
  *         description: Internal server error.
  */
 authRoutes.post("/resend-verification", authenticateUser, resendVerification);
+
+/**
+ * ----------------------------------------------------------------------------
+ * 4. Password Recovery & Management
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -342,6 +373,12 @@ authRoutes.post(
   validate(changePasswordSchema),
   changePassword,
 );
+
+/**
+ * ----------------------------------------------------------------------------
+ * 5. Profile & Global Session Invalidation
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger

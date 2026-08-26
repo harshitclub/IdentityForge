@@ -1,7 +1,21 @@
 import { z } from "zod";
 
 /**
- * Register Schema
+ * ============================================================================
+ * Auth Request Validation Schemas (Zod)
+ * ============================================================================
+ * Strict input sanitization and constraint validation rules for all incoming
+ * authentication payloads.
+ */
+
+/**
+ * Validates user registration payload.
+ * Constraints:
+ * - firstName: min 3, max 100 chars
+ * - lastName: min 3, max 100 chars
+ * - email: standard email format
+ * - password: min 8, max 32 chars
+ * - role: optional ("user" | "admin")
  */
 export const registerSchema = z.object({
   firstName: z
@@ -24,7 +38,10 @@ export const registerSchema = z.object({
 });
 
 /**
- * Login Schema
+ * Validates user login payload.
+ * Constraints:
+ * - email: valid email format
+ * - password: required non-empty string
  */
 export const loginSchema = z.object({
   email: z.email("Invalid email address"),
@@ -32,7 +49,10 @@ export const loginSchema = z.object({
 });
 
 /**
- * Change Password Schema
+ * Validates password change for authenticated users.
+ * Constraints:
+ * - currentPassword: required string
+ * - newPassword: min 8, max 32 chars
  */
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -43,14 +63,18 @@ export const changePasswordSchema = z.object({
 });
 
 /**
- * Forget Password Schema
+ * Validates forgot password request payload.
+ * Constraints:
+ * - email: valid email format
  */
 export const forgetPasswordSchema = z.object({
   email: z.email("Invalid email address"),
 });
 
 /**
- * Reset Password Schema
+ * Validates reset password payload using reset token.
+ * Constraints:
+ * - newPassword: min 8, max 32 chars
  */
 export const resetPasswordSchema = z.object({
   newPassword: z

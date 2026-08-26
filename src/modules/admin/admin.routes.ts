@@ -14,7 +14,21 @@ import {
   updateUserStatusSchema,
 } from "./admin.validator.js";
 
+/**
+ * ============================================================================
+ * Admin Routes
+ * ============================================================================
+ * Protected administrative HTTP endpoints for user discovery, role promotion,
+ * account status management, and hard/soft deletion.
+ * All routes require valid authentication (`authenticateUser`) and admin role (`authenticateAdmin`).
+ */
 const adminRoutes = Router();
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. User Listing & Discovery
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -73,6 +87,12 @@ adminRoutes.get("/users", authenticateUser, authenticateAdmin, getAllUsers);
  *         description: Internal server error.
  */
 adminRoutes.get("/users/:id", authenticateUser, authenticateAdmin, getUserById);
+
+/**
+ * ----------------------------------------------------------------------------
+ * 2. User Role & Status Administration
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -183,6 +203,12 @@ adminRoutes.patch(
   validate(updateUserStatusSchema),
   updateUserStatus,
 );
+
+/**
+ * ----------------------------------------------------------------------------
+ * 3. User Deletion & Immediate Revocation
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger

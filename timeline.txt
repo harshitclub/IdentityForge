@@ -27,12 +27,18 @@
 27. added a apiResponse function to maintain the consistency of the Response
 28. added zod in the backend for better validations.
 29. added middlewares for authenticate user and one middleware for authenticate admin
-30. improved the winston logging, convert it to produce more structured logs for loki and promtail for grafana dashboard. now we stack request entire lifecycle.
+30. improved the winston logging, convert it to produce more structured logs for loki and promtail for grafana dashboard. now we track request's entire lifecycle.
 31. edit the previous logs according to our latest code of structured logging
 32. build the redis based rate limiter and replace it with the express based rate limiter
 33. implemented prometheus in the project hosted inside the docker.
 34. added grafana in the project and run it via docker.
 35. improved the logging according to our structured logs setup in winston.
 36. configure the vitest for testing my backend
-37. done the unit testing of middlewares and util functions
-38. done the unit testing of auth.service layer
+37. done with the unit testing of middlewares and util functions
+38. done with the unit testing of auth.service layer
+39. done with the unit testing for user.service layer
+40. done with the unit testing for admin.service layer
+41. Catched the Zod transforms issue, like it parses the body but discards the parsed value, so i fixed it.
+42. added comments in every file.
+43. tried to optimize the docker little bit.
+

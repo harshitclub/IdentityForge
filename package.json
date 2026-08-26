@@ -1,18 +1,50 @@
 {
   "name": "identityforge",
   "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "Harshit Kumar",
+  "description": "Production-ready, highly secure Authentication and Identity Management microservice built with Express 5, TypeScript, Prisma, Redis, and BullMQ.",
+  "main": "dist/server.js",
   "type": "module",
-  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Harshit Kumar",
+    "url": "https://github.com/harshitclub"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshitclub/IdentityForge.git"
+  },
+  "homepage": "https://github.com/harshitclub/IdentityForge#readme",
+  "bugs": {
+    "url": "https://github.com/harshitclub/IdentityForge/issues"
+  },
+  "keywords": [
+    "authentication",
+    "authorization",
+    "identity-management",
+    "jwt",
+    "refresh-token-rotation",
+    "rbac",
+    "session-management",
+    "express5",
+    "typescript",
+    "prisma",
+    "postgresql",
+    "redis",
+    "bullmq",
+    "winston",
+    "prometheus",
+    "docker"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "npm run infra:start && npm run prisma:generate && cross-env NODE_ENV=development tsx watch src/server.ts",
-    "start": "cross-env NODE_ENV=production node dist/server.js",
     "build": "npm run prisma:generate && tsc",
+    "start": "cross-env NODE_ENV=production node dist/server.js",
     "prod": "docker compose up -d --build",
-    "infra:start": "docker compose up -d db redis prometheus",
-    "infra:stop": "docker compose stop db redis prometheus",
+    "infra:start": "docker compose up -d db redis prometheus grafana",
+    "infra:stop": "docker compose stop db redis prometheus grafana",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:clean": "docker compose down -v",

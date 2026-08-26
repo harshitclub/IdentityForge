@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from "express";
-
 import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
 
@@ -12,6 +11,15 @@ import { getRequestLogger } from "../request-context/request-context.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { AppError } from "../utils/appError.js";
 
+/**
+ * ============================================================================
+ * Central Global Error Handling Middleware
+ * ============================================================================
+ * Intercepts all rejected promises and synchronous errors from routes and middlewares.
+ * Differentiates operational AppErrors, Zod validation failures, JWT token errors,
+ * and uncaught exceptions. Formats standardized error response envelopes and masks
+ * stack traces in production mode.
+ */
 export const globalErrorHandler = (
   err: unknown,
   req: Request,
@@ -24,9 +32,7 @@ export const globalErrorHandler = (
   let message = ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
   let errors: Array<{ field: string; message: string }> = [];
 
-  /**
-   * Custom App Error
-   */
+  // Branch 1: Custom Operational Application Errors
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
@@ -44,9 +50,7 @@ export const globalErrorHandler = (
       },
     });
   } else if (err instanceof ZodError) {
-    /**
-     * Zod Validation Error
-     */
+    // Branch 2: Schema Validation Failures
     statusCode = HTTP_STATUS.BAD_REQUEST;
     message = "Validation Failed";
 
@@ -64,9 +68,7 @@ export const globalErrorHandler = (
       validationErrors: errors,
     });
   } else if (err instanceof jwt.TokenExpiredError) {
-    /**
-     * JWT Expired Error
-     */
+    // Branch 3: Expired JWT Tokens
     statusCode = HTTP_STATUS.UNAUTHORIZED;
     message = ERROR_MESSAGES.TOKEN_EXPIRED;
 
@@ -82,9 +84,7 @@ export const globalErrorHandler = (
       },
     });
   } else if (err instanceof jwt.JsonWebTokenError) {
-    /**
-     * JWT Invalid Error
-     */
+    // Branch 4: Malformed or Invalid JWT Tokens
     statusCode = HTTP_STATUS.UNAUTHORIZED;
     message = ERROR_MESSAGES.INVALID_TOKEN;
 
@@ -99,10 +99,27 @@ export const globalErrorHandler = (
         message: err.message,
       },
     });
+  } else if (
+    typeof (err as any)?.status === "number" &&
+    (err as any).status >= 400 &&
+    (err as any).status < 500
+  ) {
+    // Branch 5: Express Middleware 4xx Errors (e.g. Body parser syntax errors)
+    statusCode = (err as any).status;
+    message = (err as any).message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
+
+    logger.warn({
+      event: LOG_EVENTS.OPERATIONAL_ERROR,
+      component: "GlobalErrorHandler",
+      method: req.method,
+      path: req.originalUrl,
+      statusCode,
+      error: {
+        message,
+      },
+    });
   } else {
-    /**
-     * Unknown Errors
-     */
+    // Branch 6: Unexpected Internal Server Exceptions
     const unknownError =
       err instanceof Error
         ? err
@@ -124,9 +141,7 @@ export const globalErrorHandler = (
     });
   }
 
-  /**
-   * Development Response
-   */
+  // Development Response: Include stack traces for debugging
   if (process.env.NODE_ENV === "development") {
     return apiResponse({
       req,
@@ -143,9 +158,7 @@ export const globalErrorHandler = (
     });
   }
 
-  /**
-   * Production Response
-   */
+  // Production Response: Sanitize error output and exclude stack traces
   return apiResponse({
     req,
     res,

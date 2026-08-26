@@ -32,15 +32,33 @@ import type {
   SignupDto,
 } from "./auth.types.js";
 
+/**
+ * ============================================================================
+ * AuthService
+ * ============================================================================
+ * Core business logic for user authentication, registration, session management,
+ * token rotation, brute-force protection, and password reset workflows.
+ */
 class AuthService {
+  /**
+   * --------------------------------------------------------------------------
+   * 1. Signup Flow
+   * --------------------------------------------------------------------------
+   * Registers a new user account, creates a SHA-256 hashed verification token,
+   * and enqueues an email verification job in BullMQ.
+   *
+   * @param data - User registration payload (firstName, lastName, email, password)
+   */
   async signup(data: SignupDto) {
     const logger = getRequestLogger();
-
     const { firstName, lastName, email, password } = data;
+
     logger.info({
       event: LOG_EVENTS.SIGNUP_STARTED,
       email: maskEmail(email),
     });
+
+    // Step 1: Check if an account already exists with this email
     const existingUser = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -58,11 +76,14 @@ class AuthService {
       );
     }
 
+    // Step 2: Hash user password with Bcrypt (10 salt rounds)
     const hashedPassword = await hashPassword(password);
 
+    // Step 3: Generate a 15-minute raw verification token & compute its SHA-256 hash
     const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
     const tokenHash = sha256Hex(rawToken);
 
+    // Step 4: Atomically create User record and EmailVerificationToken in a single transaction
     const user = await prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
@@ -72,6 +93,7 @@ class AuthService {
           password: hashedPassword,
         },
       });
+
       await tx.emailVerificationToken.create({
         data: {
           userId: createdUser.id,
@@ -79,6 +101,7 @@ class AuthService {
           expiresAt,
         },
       });
+
       return createdUser;
     });
 
@@ -87,6 +110,7 @@ class AuthService {
       userId: user.id,
     });
 
+    // Step 5: Enqueue verification email job for background BullMQ worker
     const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
     await emailQueue.add(EMAIL_JOBS.VERIFICATION, {
@@ -106,15 +130,29 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 2. Login Flow
+   * --------------------------------------------------------------------------
+   * Authenticates user credentials, enforces lockout and account status rules,
+   * increments failed login attempts on failure, and creates Session & RefreshToken on success.
+   *
+   * @param data - User login credentials (email, password)
+   * @param sessionMetadata - Parsed device, browser, OS, and IP metadata
+   * @returns Tokens (access & refresh) and safe user profile data
+   */
   async login(data: LoginDto, sessionMetadata: SessionMetadata) {
     const logger = getRequestLogger();
     const { email, password } = data;
+
     logger.info({
       event: LOG_EVENTS.LOGIN_STARTED,
       email: maskEmail(email),
     });
+
     const now = new Date();
 
+    // Step 1: Look up user account
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -132,7 +170,7 @@ class AuthService {
       },
     });
 
-    // Generic error
+    // Prevent user enumeration with generic credentials error
     if (!user) {
       throw new AppError(
         ERROR_MESSAGES.INVALID_CREDENTIALS,
@@ -140,32 +178,52 @@ class AuthService {
       );
     }
 
-    // Account has been deleted
+    // Step 2: Enforce status lifecycle restrictions
     if (user.status === "DELETED") {
       logger.warn({
         event: LOG_EVENTS.ACCOUNT_DELETED,
         reason: "ACCOUNT_DELETED",
         userId: user.id,
       });
-
       throw new AppError(ERROR_MESSAGES.ACCOUNT_DELETED, HTTP_STATUS.FORBIDDEN);
     }
 
-    // Account is currently locked
+    if (user.status === "SUSPENDED") {
+      logger.warn({
+        event: LOG_EVENTS.ACCOUNT_SUSPENDED,
+        reason: "ACCOUNT_SUSPENDED",
+        userId: user.id,
+      });
+      throw new AppError(
+        ERROR_MESSAGES.ACCOUNT_SUSPENDED,
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
+    if (user.status === "BANNED") {
+      logger.warn({
+        event: LOG_EVENTS.ACCOUNT_BANNED,
+        reason: "ACCOUNT_BANNED",
+        userId: user.id,
+      });
+      throw new AppError(ERROR_MESSAGES.ACCOUNT_BANNED, HTTP_STATUS.FORBIDDEN);
+    }
+
+    // Step 3: Check if account is temporarily locked out
     if (user.lockUntil && user.lockUntil > now) {
       logger.warn({
         event: LOG_EVENTS.ACCOUNT_LOCKED,
         reason: "ACCOUNT_LOCKED",
         userId: user.id,
       });
-
       throw new AppError(ERROR_MESSAGES.ACCOUNT_LOCKED, HTTP_STATUS.FORBIDDEN);
     }
 
-    // Password verification
+    // Step 4: Verify password hash
     const isPasswordValid = await comparePassword(password, user.password!);
 
     if (!isPasswordValid) {
+      // Increment failed attempt counter
       const updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -184,6 +242,7 @@ class AuthService {
         userId: user.id,
       });
 
+      // Trigger temporary account lock if threshold is exceeded
       if (updatedUser.failedLoginAttempts >= env.MAX_FAILED_LOGIN) {
         const lockUntil = new Date(
           Date.now() + env.ACCOUNT_LOCK_DURATION * 60 * 1000,
@@ -213,12 +272,14 @@ class AuthService {
       );
     }
 
+    // Step 5: Issue Access Token (short-lived JWT)
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
       role: user.role,
     });
 
+    // Step 6: Issue Refresh Token with cryptographic JTI (UUID)
     const { token: refreshToken, jti } = generateRefreshTokenWithJti({
       id: user.id,
     });
@@ -226,8 +287,8 @@ class AuthService {
     const refreshJtiHash = sha256Hex(jti);
     const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
 
+    // Step 7: Atomically create Session, link RefreshToken, and reset failed attempts
     await prisma.$transaction(async (tx) => {
-      // Create Session
       const session = await tx.session.create({
         data: {
           userId: user.id,
@@ -237,7 +298,6 @@ class AuthService {
         },
       });
 
-      // Create Refresh Token linked to Session
       await tx.refreshToken.create({
         data: {
           userId: user.id,
@@ -247,7 +307,6 @@ class AuthService {
         },
       });
 
-      // Reset login attempts
       await tx.user.update({
         where: {
           id: user.id,
@@ -279,16 +338,24 @@ class AuthService {
     };
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 3. Logout Flow
+   * --------------------------------------------------------------------------
+   * Invalidates the user's refresh token and active sessions, and deletes cached profile.
+   * Silently swallows token errors so client logout always completes.
+   *
+   * @param refreshToken - Raw refresh token from client cookies
+   */
   async logout(refreshToken?: string) {
     const logger = getRequestLogger();
-    // No refresh token? Logout is still successful.
+
     if (!refreshToken) {
       return;
     }
 
     try {
       const payload = verifyRefreshToken(refreshToken);
-
       const refreshJtiHash = sha256Hex(payload.jti!);
 
       await prisma.$transaction(async (tx) => {
@@ -305,7 +372,7 @@ class AuthService {
         });
       });
 
-      // Invalidate cached profile
+      // Invalidate cached user profile in Redis
       await cacheRedis.del(`user:${payload.id}`);
 
       logger.info({
@@ -313,20 +380,31 @@ class AuthService {
         userId: payload.id,
       });
     } catch {
-      // Ignore invalid/expired refresh tokens.
-      // Logout should always succeed from the client's perspective.
+      // Ignore expired/invalid tokens - client cookie removal is sufficient
     }
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 4. Refresh Token Rotation (RTR)
+   * --------------------------------------------------------------------------
+   * Rotates a refresh token by verifying the JWT signature, validating the JTI
+   * hash against the database, revoking the old token, and issuing a new token pair.
+   *
+   * @param refreshToken - Raw refresh token from client cookies
+   * @returns New access and refresh token pair
+   */
   async refreshToken(refreshToken: string) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.TOKEN_REFRESH_STARTED,
     });
-    const tokenPayload = verifyRefreshToken(refreshToken);
 
+    // Step 1: Verify token signature and expiration
+    const tokenPayload = verifyRefreshToken(refreshToken);
     const refreshJtiHash = sha256Hex(tokenPayload.jti!);
 
+    // Step 2: Query database for stored token record
     const storedRefreshToken = await prisma.refreshToken.findUnique({
       where: {
         tokenHash: refreshJtiHash,
@@ -358,6 +436,7 @@ class AuthService {
       );
     }
 
+    // Step 3: Fetch user profile
     const user = await prisma.user.findUnique({
       where: {
         id: tokenPayload.id,
@@ -373,6 +452,7 @@ class AuthService {
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
+    // Step 4: Issue newly rotated access & refresh tokens
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
@@ -384,9 +464,9 @@ class AuthService {
     });
 
     const newRefreshJtiHash = sha256Hex(jti);
-
     const refreshExpiresAt = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN);
 
+    // Step 5: Atomically swap old token for new token & update session lastUsedAt
     await prisma.$transaction(async (tx) => {
       await tx.refreshToken.delete({
         where: {
@@ -412,23 +492,35 @@ class AuthService {
         },
       });
     });
+
     logger.info({
       event: LOG_EVENTS.REFRESH_TOKEN_GENERATED,
       userId: user.id,
     });
+
     return {
       accessToken,
       refreshToken: newRefreshToken,
     };
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 5. Verify Email Flow
+   * --------------------------------------------------------------------------
+   * Validates one-time verification token, updates user to ACTIVE, and purges token.
+   *
+   * @param token - Raw verification token from email query parameter
+   */
   async verifyEmail(token: string) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.EMAIL_VERIFICATION_STARTED,
     });
+
     const tokenHash = sha256Hex(token);
 
+    // Step 1: Look up token in database
     const verificationToken = await prisma.emailVerificationToken.findUnique({
       where: {
         tokenHash,
@@ -458,6 +550,7 @@ class AuthService {
       );
     }
 
+    // Step 2: Atomically mark user as verified and delete one-time token
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: {
@@ -482,6 +575,14 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 6. Resend Verification Email Flow
+   * --------------------------------------------------------------------------
+   * Cleans up any prior verification tokens for user and sends a fresh 15-minute token.
+   *
+   * @param userId - ID of authenticated user
+   */
   async resendVerification(userId: string) {
     const logger = getRequestLogger();
     const user = await prisma.user.findUnique({
@@ -507,16 +608,15 @@ class AuthService {
       );
     }
 
-    // Remove previous verification tokens
+    // Remove any previous pending verification tokens for this user
     await prisma.emailVerificationToken.deleteMany({
       where: {
         userId: user.id,
       },
     });
 
-    // Generate new verification token
+    // Generate new verification token (15 min TTL)
     const { raw: rawToken, expiresAt } = generateVerificationTokenRaw(15);
-
     const tokenHash = sha256Hex(rawToken);
 
     await prisma.emailVerificationToken.create({
@@ -541,13 +641,24 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 7. Forgot Password Flow
+   * --------------------------------------------------------------------------
+   * Initiates password reset by creating a one-time token and enqueuing an email.
+   * Returns silently if user does not exist to prevent account enumeration.
+   *
+   * @param data - Forgot password DTO containing email address
+   */
   async forgotPassword(data: ForgotPasswordDto) {
     const logger = getRequestLogger();
     const { email } = data;
+
     logger.info({
       event: LOG_EVENTS.PASSWORD_RESET_REQUESTED,
       email: maskEmail(email),
     });
+
     const user = await prisma.user.findUnique({
       where: {
         email,
@@ -571,7 +682,7 @@ class AuthService {
       },
     });
 
-    // Generate new reset token
+    // Generate new raw reset token & save SHA-256 hash
     const { raw: resetPasswordToken, expiresAt } =
       generateResetPasswordTokenRaw();
 
@@ -598,15 +709,26 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 8. Reset Password Flow
+   * --------------------------------------------------------------------------
+   * Validates reset token, verifies new password difference, updates password,
+   * marks token as used, revokes all sessions, and invalidates user cache.
+   *
+   * @param token - Raw reset token from email URL
+   * @param data - New password payload
+   */
   async resetPassword(token: string, data: ResetPasswordDto) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.PASSWORD_RESET_STARTED,
     });
-    const { newPassword } = data;
 
+    const { newPassword } = data;
     const tokenHash = sha256Hex(token);
 
+    // Step 1: Look up token in database
     const passwordResetToken = await prisma.passwordResetToken.findUnique({
       where: {
         tokenHash,
@@ -633,6 +755,7 @@ class AuthService {
       throw new AppError(ERROR_MESSAGES.TOKEN_EXPIRED, HTTP_STATUS.BAD_REQUEST);
     }
 
+    // Step 2: Prevent reusing the current password
     const isSamePassword = await comparePassword(
       newPassword,
       passwordResetToken.user.password!,
@@ -644,6 +767,7 @@ class AuthService {
 
     const hashedPassword = await hashPassword(newPassword);
 
+    // Step 3: Atomically update password, mark token used, and purge all active sessions
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: {
@@ -677,6 +801,7 @@ class AuthService {
       });
     });
 
+    // Invalidate cached user profile in Redis
     await cacheRedis.del(`user:${passwordResetToken.user.id}`);
 
     logger.info({
@@ -685,12 +810,23 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 9. Change Password Flow
+   * --------------------------------------------------------------------------
+   * Verifies current password, checks new password difference, updates password,
+   * revokes all sessions across devices, and invalidates user cache.
+   *
+   * @param userId - ID of authenticated user
+   * @param data - Current and new password payload
+   */
   async changePassword(userId: string, data: ChangePasswordDto) {
     const logger = getRequestLogger();
     logger.info({
       event: LOG_EVENTS.PASSWORD_CHANGE_STARTED,
       userId,
     });
+
     const { currentPassword, newPassword } = data;
 
     const user = await prisma.user.findUnique({
@@ -707,7 +843,7 @@ class AuthService {
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    // Verify current password
+    // Step 1: Verify current password
     const isPasswordValid = await comparePassword(
       currentPassword,
       user.password!,
@@ -720,7 +856,7 @@ class AuthService {
       );
     }
 
-    // Prevent using the same password
+    // Step 2: Prevent reusing existing password
     const isSamePassword = await comparePassword(newPassword, user.password!);
 
     if (isSamePassword) {
@@ -729,6 +865,7 @@ class AuthService {
 
     const hashedPassword = await hashPassword(newPassword);
 
+    // Step 3: Atomically update password and log out all active sessions
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: {
@@ -739,7 +876,6 @@ class AuthService {
         },
       });
 
-      // Logout from all devices
       await tx.refreshToken.deleteMany({
         where: {
           userId: user.id,
@@ -753,7 +889,7 @@ class AuthService {
       });
     });
 
-    // Invalidate cached profile
+    // Invalidate cached user profile in Redis
     await cacheRedis.del(`user:${user.id}`);
 
     logger.info({
@@ -762,11 +898,21 @@ class AuthService {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 10. Get Current User Profile (Cache-Aside Pattern)
+   * --------------------------------------------------------------------------
+   * Fetches user profile from Redis cache first; on cache miss queries database
+   * and populates Redis cache with a 5-minute TTL.
+   *
+   * @param userId - ID of authenticated user
+   * @returns User profile data and cached status flag
+   */
   async getMe(userId: string) {
     const logger = getRequestLogger();
     const cacheKey = `user:${userId}`;
 
-    // Check cache
+    // Step 1: Check Redis cache
     const cachedUser = await cacheRedis.get(cacheKey);
 
     if (cachedUser) {
@@ -780,7 +926,7 @@ class AuthService {
       };
     }
 
-    // Fetch from database
+    // Step 2: Query database on cache miss with safe field projection
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -803,20 +949,32 @@ class AuthService {
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    // Cache for 5 minutes
+    // Step 3: Populate Redis cache with 5-minute TTL (300 seconds)
     await cacheRedis.set(cacheKey, JSON.stringify(user), "EX", 60 * 5);
+
     logger.info({
       event: LOG_EVENTS.CACHE_MISS,
       cacheKey,
     });
+
     return {
       user,
       cached: false,
     };
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * 11. Revoke All Sessions Flow
+   * --------------------------------------------------------------------------
+   * Atomically deletes all active RefreshToken and Session records for the user
+   * and purges the cached profile from Redis.
+   *
+   * @param userId - ID of authenticated user
+   */
   async revokeAllSessions(userId: string) {
     const logger = getRequestLogger();
+
     await prisma.$transaction(async (tx) => {
       await tx.refreshToken.deleteMany({
         where: {
@@ -831,7 +989,7 @@ class AuthService {
       });
     });
 
-    // Invalidate cached profile
+    // Invalidate cached user profile in Redis
     await cacheRedis.del(`user:${userId}`);
 
     logger.info({

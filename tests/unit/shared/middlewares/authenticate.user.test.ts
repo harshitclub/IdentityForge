@@ -104,6 +104,44 @@ describe("authenticateUser", () => {
     ).rejects.toThrow(ERROR_MESSAGES.ACCOUNT_DELETED);
   });
 
+  it("should throw when account is suspended", async () => {
+    vi.mocked(verifyAccessToken).mockReturnValue({
+      id: "user-123",
+      email: "harshit@example.com",
+      role: "USER",
+    });
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: "user-123",
+      role: "USER",
+      status: "SUSPENDED",
+      lockUntil: null,
+    } as any);
+
+    await expect(
+      authenticateUser(req as Request, res as Response, next),
+    ).rejects.toThrow(ERROR_MESSAGES.ACCOUNT_SUSPENDED);
+  });
+
+  it("should throw when account is banned", async () => {
+    vi.mocked(verifyAccessToken).mockReturnValue({
+      id: "user-123",
+      email: "harshit@example.com",
+      role: "USER",
+    });
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: "user-123",
+      role: "USER",
+      status: "BANNED",
+      lockUntil: null,
+    } as any);
+
+    await expect(
+      authenticateUser(req as Request, res as Response, next),
+    ).rejects.toThrow(ERROR_MESSAGES.ACCOUNT_BANNED);
+  });
+
   it("should throw when account is locked", async () => {
     vi.mocked(verifyAccessToken).mockReturnValue({
       id: "user-123",

@@ -9,7 +9,21 @@ import { validate } from "../../shared/middlewares/validate.middleware.js";
 import { updateSchema } from "./user.validator.js";
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
 
+/**
+ * ============================================================================
+ * User Routes
+ * ============================================================================
+ * Authenticated endpoints for user self-service: profile updates, account
+ * deletion, and active multi-device session management.
+ * All routes require valid user authentication (`authenticateUser`).
+ */
 const userRoutes = Router();
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. Profile Management
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -61,6 +75,12 @@ userRoutes.patch(
 );
 
 /**
+ * ----------------------------------------------------------------------------
+ * 2. Self Account Deletion
+ * ----------------------------------------------------------------------------
+ */
+
+/**
  * @swagger
  * /users/account:
  *   delete:
@@ -83,6 +103,12 @@ userRoutes.patch(
  *         description: Internal server error.
  */
 userRoutes.delete("/account", authenticateUser, deleteAccount);
+
+/**
+ * ----------------------------------------------------------------------------
+ * 3. Session Management & Device Revocation
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger

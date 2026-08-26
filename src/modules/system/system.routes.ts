@@ -8,8 +8,23 @@ import {
   resetCache,
   version,
 } from "./system.controller.js";
+import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
+import { authenticateAdmin } from "../../shared/middlewares/authenticate.admin.js";
 
+/**
+ * ============================================================================
+ * System Routes
+ * ============================================================================
+ * Probes for Kubernetes / Docker orchestrators (Liveness, Readiness, Health),
+ * runtime diagnostics, Prometheus scraping, and administrative cache flush.
+ */
 const systemRoutes = Router();
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. Health & Orchestration Probes
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -57,8 +72,16 @@ systemRoutes.get("/ready", ready);
  *     responses:
  *       200:
  *         description: Application is alive.
+ *       503:
+ *         description: Application is not alive.
  */
 systemRoutes.get("/live", live);
+
+/**
+ * ----------------------------------------------------------------------------
+ * 2. Version & Diagnostics
+ * ----------------------------------------------------------------------------
+ */
 
 /**
  * @swagger
@@ -91,6 +114,12 @@ systemRoutes.get("/version", version);
 systemRoutes.get("/info", info);
 
 /**
+ * ----------------------------------------------------------------------------
+ * 3. Cache Maintenance & Prometheus Metrics
+ * ----------------------------------------------------------------------------
+ */
+
+/**
  * @swagger
  * /system/cache/reset:
  *   post:
@@ -102,9 +131,21 @@ systemRoutes.get("/info", info);
  *     responses:
  *       200:
  *         description: Redis cache cleared successfully.
+ *       401:
+ *         description: Unauthorized.
+ *       403:
+ *         description: Forbidden. Admin access required.
  */
-systemRoutes.post("/cache/reset", resetCache);
+systemRoutes.post(
+  "/cache/reset",
+  authenticateUser,
+  authenticateAdmin,
+  resetCache,
+);
 
+/**
+ * Endpoint for Prometheus scraper to collect HTTP and system metrics.
+ */
 systemRoutes.get("/metrics", metrics);
 
 export default systemRoutes;
