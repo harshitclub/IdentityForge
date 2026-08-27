@@ -42,3 +42,4 @@
 42. Applied Redis rate limiter middleware to protect all sensitive auth and system routes.
 43. Conducted k6 load and concurrency testing, verifying sub-5ms health probes and rate-limiting stability under 30-50 virtual users.
 44. Created minimal, comprehensive project README documenting architecture, API endpoints, benchmarks, and quickstart instructions.
+45. Configured GitHub Actions CI pipeline to automate dependency installation, Prisma generation, TypeScript build verification, and test execution on push and PR.
