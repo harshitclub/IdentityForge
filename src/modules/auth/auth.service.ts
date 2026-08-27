@@ -23,6 +23,7 @@ import { generateResetPasswordTokenRaw } from "../../shared/utils/auth/resetPass
 import { sha256Hex } from "../../shared/utils/auth/sha256Hex.js";
 import { generateVerificationTokenRaw } from "../../shared/utils/auth/verificationToken.js";
 import { maskEmail } from "../../shared/utils/mask.js";
+import { authEventsTotal } from "../../metrics/prometheus.js";
 import type {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -128,6 +129,8 @@ class AuthService {
       event: LOG_EVENTS.SIGNUP_COMPLETED,
       userId: user.id,
     });
+
+    authEventsTotal.inc({ event: "signup_success" });
   }
 
   /**
@@ -242,6 +245,8 @@ class AuthService {
         userId: user.id,
       });
 
+      authEventsTotal.inc({ event: "login_failed" });
+
       // Trigger temporary account lock if threshold is exceeded
       if (updatedUser.failedLoginAttempts >= env.MAX_FAILED_LOGIN) {
         const lockUntil = new Date(
@@ -259,6 +264,8 @@ class AuthService {
           event: LOG_EVENTS.ACCOUNT_LOCKED,
           userId: user.id,
         });
+
+        authEventsTotal.inc({ event: "account_locked" });
 
         throw new AppError(
           ERROR_MESSAGES.ACCOUNT_LOCKED,
@@ -323,6 +330,8 @@ class AuthService {
       event: LOG_EVENTS.USER_LOGIN_SUCCESS,
       userId: user.id,
     });
+
+    authEventsTotal.inc({ event: "login_success" });
 
     return {
       accessToken,

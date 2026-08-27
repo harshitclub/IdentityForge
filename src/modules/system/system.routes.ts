@@ -10,6 +10,7 @@ import {
 } from "./system.controller.js";
 import { authenticateUser } from "../../shared/middlewares/authenticate.user.js";
 import { authenticateAdmin } from "../../shared/middlewares/authenticate.admin.js";
+import { rateLimiter } from "../../shared/middlewares/redisRateLimiter.js";
 
 /**
  * ============================================================================
@@ -138,6 +139,7 @@ systemRoutes.get("/info", info);
  */
 systemRoutes.post(
   "/cache/reset",
+  rateLimiter,
   authenticateUser,
   authenticateAdmin,
   resetCache,

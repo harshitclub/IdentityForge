@@ -1,44 +1,44 @@
-1. setting up a monolith structure of the IdentityForge backend
-2. setting up typeScript in it.
-3. setting up a express server.
-4. setting up a global error handler middleware.
-5. setting up a not found handler.
-6. setting up config files like env.ts
-7. setting up routes
-8. setting up controllers
-9. setting up postgresql in neon and connect with my backend.
-10. writed the required schemas using prisma and do the generation and migrations.
-11. writed the business logic of auth
-12. dockerize this backend.
-13. move the neon postgresql to docker and dump the idea of neon postgresql.
-14. writed the business logic of user and admin.
-15. writed the express based rate limiter.
-16. setting up winston and morgan for logging.
-17. tested the api's manually in postman
-18. tested the api's by using postman script also.
-19. added the real smtp mails for sending the emails for verification, forget password, etc.
-20. setting up bullmq indirectly setted the redis in docker for bullmq.
-21. added messaging queue with bullmq for sending email.
-22. added caching using redis in some apis.
-23. convert the monolith backend architecture to modular monolith architecture.
-24. move the business logic of controllers to their respective .service.ts file (ex. auth.service.ts)
-25. setting up swagger for api docs.
-26. added helmet, hpp, and compression dependency.
-27. added a apiResponse function to maintain the consistency of the Response
-28. added zod in the backend for better validations.
-29. added middlewares for authenticate user and one middleware for authenticate admin
-30. improved the winston logging, convert it to produce more structured logs for loki and promtail for grafana dashboard. now we track request's entire lifecycle.
-31. edit the previous logs according to our latest code of structured logging
-32. build the redis based rate limiter and replace it with the express based rate limiter
-33. implemented prometheus in the project hosted inside the docker.
-34. added grafana in the project and run it via docker.
-35. improved the logging according to our structured logs setup in winston.
-36. configure the vitest for testing my backend
-37. done with the unit testing of middlewares and util functions
-38. done with the unit testing of auth.service layer
-39. done with the unit testing for user.service layer
-40. done with the unit testing for admin.service layer
-41. Catched the Zod transforms issue, like it parses the body but discards the parsed value, so i fixed it.
-42. added comments in every file.
-43. tried to optimize the docker little bit.
-
+1. Initialized backend project structure with TypeScript and Express.
+2. Set up environment configuration with Zod validation (env.ts).
+3. Created global error handling middleware and 404 not found handler.
+4. Set up Prisma ORM with PostgreSQL database schema (User, Session, RefreshToken, Token models).
+5. Switched from Neon Cloud PostgreSQL to Dockerized PostgreSQL for local development.
+6. Implemented core authentication logic (Signup, Login, Logout).
+7. Added security protections: Bcrypt password hashing (10 rounds) and anti-user enumeration.
+8. Implemented Refresh Token Rotation (RTR) storing SHA-256 hashed JTI tokens in DB.
+9. Added brute-force defense with failed login attempt counters and temporary account lockout.
+10. Added multi-device session management with IP, user-agent, and device metadata tracking.
+11. Built password recovery flow (Forgot Password, Reset Password) preventing current password reuse.
+12. Built email verification system with SHA-256 hashed one-time verification tokens.
+13. Set up Nodemailer for transactional emails (Verification, Password Reset).
+14. Configured Redis in Docker for job queues, caching, and rate limiting.
+15. Set up BullMQ for asynchronous background email processing with retry & exponential backoff.
+16. Refactored codebase from basic monolith to a clean Modular Monolith (auth, user, admin, system).
+17. Decoupled business logic into dedicated Service classes (auth.service, user.service, admin.service).
+18. Implemented standardized API response envelope utility (apiResponse).
+19. Added Zod schema validation middleware for all request payloads.
+20. Fixed Zod body parsing issue to ensure validated/transformed values are preserved on req.body.
+21. Implemented Redis Cache-Aside pattern for user profiles and admin paginated queries.
+22. Added cache invalidation triggers on profile updates, status changes, and deletions.
+23. Built distributed Redis rate limiter middleware setting standard RFC headers (X-RateLimit-*).
+24. Added HTTP security headers using Helmet, HPP (HTTP Parameter Pollution), and Compression.
+25. Added AsyncLocalStorage request-context middleware to propagate unique X-Request-ID across the app.
+26. Implemented structured Winston JSON logging with contextual metadata (requestId, service, environment, pid).
+27. Built User self-service module (Profile update, username conflict checks, session revocation, soft delete).
+28. Built Admin management module (Paginated user list, role promotion, account ban/suspension, deletion).
+29. Added System module with orchestration health checks (/live, /ready, /health, /info, /version).
+30. Integrated Prometheus metrics registry with custom latency histograms and domain event counters.
+31. Added Grafana in Docker Compose for real-time metrics visualization.
+32. Implemented OpenAPI / Swagger documentation for all API routes (/api-docs).
+33. Created multi-stage production Dockerfile (builder + alpine runner, non-root user, automatic migrations).
+34. Added graceful shutdown handlers (SIGINT/SIGTERM) to cleanly disconnect HTTP, BullMQ, Redis, and Prisma.
+35. Configured Vitest test runner with v8 coverage provider.
+36. Wrote unit tests for all shared utilities, auth helpers, and custom middlewares.
+37. Wrote unit tests for auth.service, user.service, and admin.service business logic layers.
+38. Wrote end-to-end integration tests using Supertest for app, auth, and system route flows.
+39. Achieved >90% statement and line test coverage across 252 tests.
+40. Added k6 smoke test script for health probe verification.
+41. Added comprehensive JSDoc comments and documentation across all modules.
+42. Applied Redis rate limiter middleware to protect all sensitive auth and system routes.
+43. Conducted k6 load and concurrency testing, verifying sub-5ms health probes and rate-limiting stability under 30-50 virtual users.
+44. Created minimal, comprehensive project README documenting architecture, API endpoints, benchmarks, and quickstart instructions.

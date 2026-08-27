@@ -12,6 +12,7 @@ import { setupSwagger } from "./docs/swagger.js";
 import { requestIdMiddleware } from "./shared/middlewares/request-id.middleware.js";
 import { requestContextMiddleware } from "./shared/request-context/request-context.middleware.js";
 import { requestLoggerMiddleware } from "./shared/middlewares/request-logger.middleware.js";
+import { metricsMiddleware } from "./shared/middlewares/metrics.middleware.js";
 import { notFoundHandler } from "./shared/middlewares/notFound.middleware.js";
 import { globalErrorHandler } from "./shared/middlewares/error.middleware.js";
 
@@ -36,12 +37,13 @@ app.set("trust proxy", 1);
  * ----------------------------------------------------------------------------
  * 2. Observability & Request Tracing (Mounted First)
  * ----------------------------------------------------------------------------
- * Ensures every incoming request receives an X-Request-ID and an
- * AsyncLocalStorage logger context before any parsing or routing occurs.
+ * Ensures every incoming request receives an X-Request-ID, an AsyncLocalStorage
+ * logger context, and Prometheus metrics telemetry before any routing occurs.
  */
 app.use(requestIdMiddleware);
 app.use(requestContextMiddleware);
 app.use(requestLoggerMiddleware);
+app.use(metricsMiddleware);
 
 /**
  * ----------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import {
   HTTP_STATUS,
   LOG_EVENTS,
 } from "../../constants/index.js";
+import { authEventsTotal } from "../../metrics/prometheus.js";
 
 /**
  * ============================================================================
@@ -51,6 +52,8 @@ export async function rateLimiter(
     // Step 4: Block request if limit exceeded
     if (currentRequestCount > MAX_REQUESTS) {
       res.setHeader("Retry-After", ttl);
+
+      authEventsTotal.inc({ event: "rate_limit_exceeded" });
 
       logger.warn({
         event: LOG_EVENTS.RATE_LIMIT_EXCEEDED,

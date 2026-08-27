@@ -97,12 +97,18 @@ describe("System Integration Tests", () => {
     expect(json.data.ready).toBe(true);
   });
 
-  it("GET /system/metrics should expose Prometheus metrics", async () => {
+  it("GET /system/metrics should expose Prometheus default and custom HTTP metrics", async () => {
+    // Generate a request first to ensure custom HTTP metrics are populated
+    await fetch(`${baseUrl}/system/live`);
+
     const res = await fetch(`${baseUrl}/system/metrics`);
     const text = await res.text();
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/plain");
-    expect(text.length).toBeGreaterThan(0);
+    expect(text).toContain("process_cpu_user_seconds_total");
+    expect(text).toContain("nodejs_heap_size_total_bytes");
+    expect(text).toContain("http_requests_total");
+    expect(text).toContain("http_request_duration_seconds");
   });
 });

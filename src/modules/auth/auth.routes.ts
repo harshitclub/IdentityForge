@@ -84,7 +84,7 @@ const authRoutes = Router();
  *       500:
  *         description: Internal server error.
  */
-authRoutes.post("/signup", validate(registerSchema), signup);
+authRoutes.post("/signup", rateLimiter, validate(registerSchema), signup);
 
 /**
  * ----------------------------------------------------------------------------
@@ -132,7 +132,7 @@ authRoutes.post("/signup", validate(registerSchema), signup);
  *       500:
  *         description: Internal server error.
  */
-authRoutes.post("/login", rateLimiter, validate(loginSchema), login);
+authRoutes.post("/login", validate(loginSchema), login);
 
 /**
  * @swagger
@@ -173,7 +173,7 @@ authRoutes.post("/logout", logout);
  *       500:
  *         description: Internal server error.
  */
-authRoutes.post("/refresh-token", refreshToken);
+authRoutes.post("/refresh-token", rateLimiter, refreshToken);
 
 /**
  * ----------------------------------------------------------------------------
@@ -234,7 +234,7 @@ authRoutes.post("/verify-email", verifyEmail);
  *       500:
  *         description: Internal server error.
  */
-authRoutes.post("/resend-verification", authenticateUser, resendVerification);
+authRoutes.post("/resend-verification", rateLimiter, authenticateUser, resendVerification);
 
 /**
  * ----------------------------------------------------------------------------
@@ -275,6 +275,7 @@ authRoutes.post("/resend-verification", authenticateUser, resendVerification);
  */
 authRoutes.post(
   "/forgot-password",
+  rateLimiter,
   validate(forgetPasswordSchema),
   forgotPassword,
 );
@@ -320,6 +321,7 @@ authRoutes.post(
  */
 authRoutes.post(
   "/reset-password",
+  rateLimiter,
   validate(resetPasswordSchema),
   resetPassword,
 );

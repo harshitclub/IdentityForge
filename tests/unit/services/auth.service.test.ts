@@ -107,9 +107,6 @@ vi.mock("../../../src/config/redis.js", () => ({
 
 vi.mock("../../../src/shared/utils/auth/resetPasswordToken.js", () => ({
   verifyResetPasswordToken: vi.fn(),
-}));
-
-vi.mock("../../../src/shared/utils/auth/resetPasswordToken.js", () => ({
   generateResetPasswordTokenRaw: vi.fn(),
 }));
 
